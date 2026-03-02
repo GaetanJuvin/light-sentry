@@ -1,4 +1,5 @@
 use axum::{
+    body::Bytes,
     extract::{Path, Query, State},
     http::{HeaderMap, StatusCode},
     response::Json,
@@ -8,6 +9,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 use super::auth::{authenticate_project, extract_auth};
+use super::decompress::decompress_body;
 use super::fingerprint::compute_fingerprint;
 use crate::state::AppState;
 
@@ -16,7 +18,7 @@ pub async fn store_event(
     Path(project_id): Path<Uuid>,
     headers: HeaderMap,
     Query(query): Query<HashMap<String, String>>,
-    body: String,
+    body: Bytes,
 ) -> Result<Json<Value>, StatusCode> {
     let _project_id_from_path = project_id;
 
@@ -25,7 +27,8 @@ pub async fn store_event(
         .await
         .ok_or(StatusCode::UNAUTHORIZED)?;
 
-    let event: Value = serde_json::from_str(&body).map_err(|_| StatusCode::BAD_REQUEST)?;
+    let body_str = decompress_body(&headers, &body).map_err(|_| StatusCode::BAD_REQUEST)?;
+    let event: Value = serde_json::from_str(&body_str).map_err(|_| StatusCode::BAD_REQUEST)?;
 
     let event_id = event
         .get("event_id")

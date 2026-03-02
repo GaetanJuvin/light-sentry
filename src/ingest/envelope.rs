@@ -1,4 +1,5 @@
 use axum::{
+    body::Bytes,
     extract::{Path, Query, State},
     http::{HeaderMap, StatusCode},
     response::Json,
@@ -8,6 +9,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 use super::auth::{authenticate_project, extract_auth};
+use super::decompress::decompress_body;
 use super::fingerprint::compute_fingerprint;
 use super::store::{build_context, extract_title};
 use crate::state::AppState;
@@ -93,13 +95,14 @@ pub async fn envelope_handler(
     Path(project_id): Path<Uuid>,
     headers: HeaderMap,
     Query(query): Query<HashMap<String, String>>,
-    body: String,
+    body: Bytes,
 ) -> Result<Json<Value>, StatusCode> {
     let _project_id_from_path = project_id;
 
     let auth = extract_auth(&headers, &query);
 
-    let envelope = parse_envelope(&body).ok_or(StatusCode::BAD_REQUEST)?;
+    let body_str = decompress_body(&headers, &body).map_err(|_| StatusCode::BAD_REQUEST)?;
+    let envelope = parse_envelope(&body_str).ok_or(StatusCode::BAD_REQUEST)?;
 
     let public_key = if let Some(a) = &auth {
         a.public_key.clone()
