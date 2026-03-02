@@ -28,6 +28,19 @@ pub struct LogRow {
     pub context: serde_json::Value,
 }
 
+#[derive(sqlx::FromRow)]
+struct HistogramRow {
+    bucket: chrono::DateTime<chrono::Utc>,
+    count: i64,
+}
+
+pub struct HistogramBar {
+    pub label: String,
+    pub count: i64,
+    pub bar_height: i64,
+    pub x: i64,
+}
+
 #[derive(Deserialize, Default)]
 pub struct LogFilter {
     #[serde(default)]
@@ -52,6 +65,8 @@ struct LogsTemplate {
     page: i64,
     total_pages: i64,
     total_count: i64,
+    histogram: Vec<HistogramBar>,
+    chart_width: i64,
 }
 
 #[derive(Template)]
@@ -84,6 +99,27 @@ pub async fn list(
     let total_pages = ((total_count as f64) / (PAGE_SIZE as f64)).ceil() as i64;
     let total_pages = total_pages.max(1);
 
+    let raw_histogram = fetch_histogram(&state.db, project_id, level, search).await;
+    let max_count = raw_histogram.iter().map(|b| b.count).max().unwrap_or(0);
+    let histogram: Vec<HistogramBar> = raw_histogram
+        .iter()
+        .enumerate()
+        .map(|(i, b)| {
+            let bar_height = if max_count > 0 {
+                (b.count as f64 / max_count as f64 * 70.0) as i64
+            } else {
+                0
+            };
+            HistogramBar {
+                label: b.bucket.format("%H:%M").to_string(),
+                count: b.count,
+                bar_height: bar_height.max(1),
+                x: (i as i64) * 14,
+            }
+        })
+        .collect();
+    let chart_width = (histogram.len() as i64) * 14;
+
     render(LogsTemplate {
         project_id,
         logs,
@@ -92,6 +128,8 @@ pub async fn list(
         page,
         total_pages,
         total_count,
+        histogram,
+        chart_width,
     })
 }
 
@@ -166,4 +204,29 @@ async fn fetch_logs(
     .unwrap_or(0);
 
     (logs, total_count)
+}
+
+async fn fetch_histogram(
+    db: &sqlx::PgPool,
+    project_id: uuid::Uuid,
+    level: Option<&str>,
+    search: Option<&str>,
+) -> Vec<HistogramRow> {
+    sqlx::query_as(
+        "SELECT date_trunc('minute', received_at) AS bucket, \
+                COUNT(*) AS count \
+         FROM logs \
+         WHERE project_id = $1 \
+           AND received_at > NOW() - INTERVAL '1 hour' \
+           AND ($2::text IS NULL OR level = $2) \
+           AND ($3::text IS NULL OR message ILIKE '%' || $3 || '%') \
+         GROUP BY bucket \
+         ORDER BY bucket",
+    )
+    .bind(project_id)
+    .bind(level)
+    .bind(search)
+    .fetch_all(db)
+    .await
+    .unwrap_or_default()
 }
