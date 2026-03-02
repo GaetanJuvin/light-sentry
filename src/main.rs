@@ -1,7 +1,10 @@
-use axum::{Router, routing::get};
+use axum::{Router, routing::{get, post}};
 use tower_http::trace::TraceLayer;
+use tower_sessions::{MemoryStore, SessionManagerLayer, Expiry};
+use time::Duration;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+mod auth;
 mod error;
 mod ingest;
 mod routes;
@@ -30,17 +33,26 @@ async fn main() -> anyhow::Result<()> {
 
     let state = AppState { db: pool };
 
+    let session_store = MemoryStore::default();
+    let session_layer = SessionManagerLayer::new(session_store)
+        .with_secure(false)
+        .with_expiry(Expiry::OnInactivity(Duration::hours(2)));
+
     let app = Router::new()
         .route("/health", get(|| async { "ok" }))
         .route(
             "/api/{project_id}/store/",
-            axum::routing::post(ingest::store::store_event),
+            post(ingest::store::store_event),
         )
         .route(
             "/api/{project_id}/envelope/",
-            axum::routing::post(ingest::envelope::envelope_handler),
+            post(ingest::envelope::envelope_handler),
         )
+        .route("/login", get(routes::auth::login_page).post(routes::auth::login_submit))
+        .route("/register", get(routes::auth::register_page).post(routes::auth::register_submit))
+        .route("/logout", post(routes::auth::logout))
         .with_state(state)
+        .layer(session_layer)
         .layer(TraceLayer::new_for_http());
 
     let addr = std::env::var("LISTEN_ADDR").unwrap_or_else(|_| "0.0.0.0:3000".into());

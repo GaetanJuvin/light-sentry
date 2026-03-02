@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block nav %}{% endblock %}
+{% block title %}Login — light-sentry{% endblock %}
+{% block content %}
+<article style="max-width:400px;margin:4rem auto">
+  <h2>Login</h2>
+  {% match error %}
+    {% when Some with (msg) %}
+    <p style="color:var(--pico-del-color)">{{ msg }}</p>
+    {% when None %}
+  {% endmatch %}
+  <form method="post" action="/login">
+    <label>Email <input type="email" name="email" required /></label>
+    <label>Password <input type="password" name="password" required /></label>
+    <button type="submit">Login</button>
+  </form>
+  <small>No account? <a href="/register">Register</a></small>
+</article>
+{% endblock %}

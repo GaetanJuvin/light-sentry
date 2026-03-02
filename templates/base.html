@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}light-sentry{% endblock %}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+  <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
+  <style>
+    :root { --pico-font-size: 14px; }
+    nav { padding: 0.5rem 1rem; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 1rem; }
+    table { font-size: 0.9rem; }
+    .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+    .badge-error { background: #fee; color: #c00; }
+    .badge-warning { background: #fff3cd; color: #856404; }
+    .badge-fatal { background: #c00; color: #fff; }
+    .badge-info { background: #d1ecf1; color: #0c5460; }
+    .badge-debug { background: #e2e3e5; color: #383d41; }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  {% block nav %}
+  <nav class="container">
+    <ul>
+      <li><strong><a href="/projects">light-sentry</a></strong></li>
+    </ul>
+    <ul>
+      <li><a href="/projects">Projects</a></li>
+      <li><form method="post" action="/logout" style="margin:0"><button type="submit" class="outline secondary" style="margin:0;padding:0.25rem 0.75rem">Logout</button></form></li>
+    </ul>
+  </nav>
+  {% endblock %}
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
