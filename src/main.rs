@@ -5,6 +5,7 @@ use time::Duration;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 mod auth;
+mod background;
 mod error;
 mod ingest;
 mod routes;
@@ -32,6 +33,8 @@ async fn main() -> anyhow::Result<()> {
     sqlx::migrate!("./migrations").run(&pool).await?;
 
     let state = AppState { db: pool };
+
+    background::spawn_retention_cleanup(state.db.clone());
 
     let session_store = MemoryStore::default();
     let session_layer = SessionManagerLayer::new(session_store)
