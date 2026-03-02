@@ -32,6 +32,14 @@ async fn main() -> anyhow::Result<()> {
 
     let app = Router::new()
         .route("/health", get(|| async { "ok" }))
+        .route(
+            "/api/{project_id}/store/",
+            axum::routing::post(ingest::store::store_event),
+        )
+        .route(
+            "/api/{project_id}/envelope/",
+            axum::routing::post(ingest::envelope::envelope_handler),
+        )
         .with_state(state)
         .layer(TraceLayer::new_for_http());
 
