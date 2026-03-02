@@ -1,3 +1,44 @@
-{% for log in logs %}
-{% include "partials/log_row.html" %}
-{% endfor %}
+<table>
+  <thead>
+    <tr>
+      <th>Level</th>
+      <th>Message</th>
+      <th>Time</th>
+    </tr>
+  </thead>
+  <tbody id="log-body"
+         {% if page == 1 %}
+         hx-get="/{{ project_id }}/logs/stream?level={{ current_level.as_deref().unwrap_or_default() }}&search={{ current_search }}&page=1"
+         hx-trigger="every 5s"
+         hx-target="#log-table-wrapper"
+         hx-swap="innerHTML"
+         {% endif %}>
+    {% for log in logs %}
+    {% include "partials/log_row.html" %}
+    {% endfor %}
+  </tbody>
+</table>
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem">
+  <span style="color:#666;font-size:0.9rem">{{ total_count }} logs total — page {{ page }} of {{ total_pages }}</span>
+  <div style="display:flex;gap:0.5rem">
+    {% if page > 1 %}
+    <button hx-get="/{{ project_id }}/logs/stream?level={{ current_level.as_deref().unwrap_or_default() }}&search={{ current_search }}&page={{ page - 1 }}"
+            hx-target="#log-table-wrapper"
+            hx-swap="innerHTML">
+      Prev
+    </button>
+    {% else %}
+    <button disabled>Prev</button>
+    {% endif %}
+    {% if page < total_pages %}
+    <button hx-get="/{{ project_id }}/logs/stream?level={{ current_level.as_deref().unwrap_or_default() }}&search={{ current_search }}&page={{ page + 1 }}"
+            hx-target="#log-table-wrapper"
+            hx-swap="innerHTML">
+      Next
+    </button>
+    {% else %}
+    <button disabled>Next</button>
+    {% endif %}
+  </div>
+</div>

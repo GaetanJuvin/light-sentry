@@ -18,6 +18,8 @@ fn render<T: Template>(tmpl: T) -> Response {
     }
 }
 
+const PAGE_SIZE: i64 = 50;
+
 #[derive(sqlx::FromRow)]
 pub struct LogRow {
     pub level: String,
@@ -32,6 +34,12 @@ pub struct LogFilter {
     pub level: Option<String>,
     #[serde(default)]
     pub search: Option<String>,
+    #[serde(default = "default_page")]
+    pub page: i64,
+}
+
+fn default_page() -> i64 {
+    1
 }
 
 #[derive(Template)]
@@ -41,12 +49,21 @@ struct LogsTemplate {
     logs: Vec<LogRow>,
     current_level: Option<String>,
     current_search: String,
+    page: i64,
+    total_pages: i64,
+    total_count: i64,
 }
 
 #[derive(Template)]
 #[template(path = "partials/log_stream.html")]
 struct LogStreamTemplate {
+    project_id: uuid::Uuid,
     logs: Vec<LogRow>,
+    current_level: Option<String>,
+    current_search: String,
+    page: i64,
+    total_pages: i64,
+    total_count: i64,
 }
 
 pub async fn list(
@@ -61,14 +78,20 @@ pub async fn list(
 
     let level = filter.level.as_deref().filter(|l| !l.is_empty());
     let search = filter.search.as_deref().filter(|s| !s.is_empty());
+    let page = filter.page.max(1);
 
-    let logs = fetch_logs(&state.db, project_id, level, search).await;
+    let (logs, total_count) = fetch_logs(&state.db, project_id, level, search, page).await;
+    let total_pages = ((total_count as f64) / (PAGE_SIZE as f64)).ceil() as i64;
+    let total_pages = total_pages.max(1);
 
     render(LogsTemplate {
         project_id,
         logs,
         current_level: level.map(String::from),
         current_search: search.unwrap_or_default().to_string(),
+        page,
+        total_pages,
+        total_count,
     })
 }
 
@@ -84,10 +107,21 @@ pub async fn stream(
 
     let level = filter.level.as_deref().filter(|l| !l.is_empty());
     let search = filter.search.as_deref().filter(|s| !s.is_empty());
+    let page = filter.page.max(1);
 
-    let logs = fetch_logs(&state.db, project_id, level, search).await;
+    let (logs, total_count) = fetch_logs(&state.db, project_id, level, search, page).await;
+    let total_pages = ((total_count as f64) / (PAGE_SIZE as f64)).ceil() as i64;
+    let total_pages = total_pages.max(1);
 
-    render(LogStreamTemplate { logs })
+    render(LogStreamTemplate {
+        project_id,
+        logs,
+        current_level: level.map(String::from),
+        current_search: search.unwrap_or_default().to_string(),
+        page,
+        total_pages,
+        total_count,
+    })
 }
 
 async fn fetch_logs(
@@ -95,20 +129,41 @@ async fn fetch_logs(
     project_id: uuid::Uuid,
     level: Option<&str>,
     search: Option<&str>,
-) -> Vec<LogRow> {
-    sqlx::query_as(
+    page: i64,
+) -> (Vec<LogRow>, i64) {
+    let offset = (page - 1) * PAGE_SIZE;
+
+    let logs: Vec<LogRow> = sqlx::query_as(
         "SELECT level, message, received_at, context \
          FROM logs \
          WHERE project_id = $1 \
            AND ($2::text IS NULL OR level = $2) \
            AND ($3::text IS NULL OR message ILIKE '%' || $3 || '%') \
          ORDER BY received_at DESC \
-         LIMIT 200",
+         LIMIT $4 OFFSET $5",
     )
     .bind(project_id)
     .bind(level)
     .bind(search)
+    .bind(PAGE_SIZE)
+    .bind(offset)
     .fetch_all(db)
     .await
-    .unwrap_or_default()
+    .unwrap_or_default();
+
+    let total_count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) \
+         FROM logs \
+         WHERE project_id = $1 \
+           AND ($2::text IS NULL OR level = $2) \
+           AND ($3::text IS NULL OR message ILIKE '%' || $3 || '%')",
+    )
+    .bind(project_id)
+    .bind(level)
+    .bind(search)
+    .fetch_one(db)
+    .await
+    .unwrap_or(0);
+
+    (logs, total_count)
 }

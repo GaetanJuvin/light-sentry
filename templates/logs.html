@@ -4,7 +4,7 @@
 {% include "partials/project_nav.html" %}
 <h2>Logs</h2>
 
-<form hx-get="/{{ project_id }}/logs/stream" hx-target="#log-body" hx-swap="innerHTML" hx-trigger="change" style="display:flex;gap:1rem;align-items:end;margin-bottom:1rem">
+<form hx-get="/{{ project_id }}/logs/stream" hx-target="#log-table-wrapper" hx-swap="innerHTML" hx-trigger="change" hx-vals='{"page": "1"}' style="display:flex;gap:1rem;align-items:end;margin-bottom:1rem">
   <label style="flex:0 0 auto">
     Level
     <select name="level">
@@ -23,6 +23,7 @@
   <button type="submit">Filter</button>
 </form>
 
+<div id="log-table-wrapper">
 <table>
   <thead>
     <tr>
@@ -32,12 +33,40 @@
     </tr>
   </thead>
   <tbody id="log-body"
-         hx-get="/{{ project_id }}/logs/stream?level={{ current_level.as_deref().unwrap_or_default() }}&search={{ current_search }}"
+         {% if page == 1 %}
+         hx-get="/{{ project_id }}/logs/stream?level={{ current_level.as_deref().unwrap_or_default() }}&search={{ current_search }}&page=1"
          hx-trigger="every 5s"
-         hx-swap="innerHTML">
+         hx-target="#log-table-wrapper"
+         hx-swap="innerHTML"
+         {% endif %}>
     {% for log in logs %}
     {% include "partials/log_row.html" %}
     {% endfor %}
   </tbody>
 </table>
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem">
+  <span style="color:#666;font-size:0.9rem">{{ total_count }} logs total — page {{ page }} of {{ total_pages }}</span>
+  <div style="display:flex;gap:0.5rem">
+    {% if page > 1 %}
+    <button hx-get="/{{ project_id }}/logs/stream?level={{ current_level.as_deref().unwrap_or_default() }}&search={{ current_search }}&page={{ page - 1 }}"
+            hx-target="#log-table-wrapper"
+            hx-swap="innerHTML">
+      Prev
+    </button>
+    {% else %}
+    <button disabled>Prev</button>
+    {% endif %}
+    {% if page < total_pages %}
+    <button hx-get="/{{ project_id }}/logs/stream?level={{ current_level.as_deref().unwrap_or_default() }}&search={{ current_search }}&page={{ page + 1 }}"
+            hx-target="#log-table-wrapper"
+            hx-swap="innerHTML">
+      Next
+    </button>
+    {% else %}
+    <button disabled>Next</button>
+    {% endif %}
+  </div>
+</div>
+</div>
 {% endblock %}
