@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Issues — light-sentry{% endblock %}
+{% block content %}
+{% include "partials/project_nav.html" %}
+<h2>Issues</h2>
+
+{% if issues.is_empty() %}
+  <p>No issues recorded yet.</p>
+{% else %}
+<table>
+  <thead>
+    <tr>
+      <th>Title</th>
+      <th>Level</th>
+      <th>Events</th>
+      <th>Last Seen</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for issue in issues %}
+    <tr>
+      <td><a href="/{{ project_id }}/issues/{{ issue.fingerprint }}">{{ issue.title }}</a></td>
+      <td><span class="badge badge-{{ issue.level }}">{{ issue.level }}</span></td>
+      <td>{{ issue.count }}</td>
+      <td>{% match issue.last_seen %}{% when Some with (ts) %}{{ ts.format("%Y-%m-%d %H:%M") }}{% when None %}—{% endmatch %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

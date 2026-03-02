@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}New Project — light-sentry{% endblock %}
+{% block content %}
+<article style="max-width:500px;margin:2rem auto">
+  <h2>Create Project</h2>
+  <form method="post" action="/projects">
+    <label>Project Name <input type="text" name="name" required autofocus /></label>
+    <button type="submit">Create</button>
+  </form>
+  <small><a href="/projects">Back to projects</a></small>
+</article>
+{% endblock %}

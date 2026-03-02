@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Logs — light-sentry{% endblock %}
+{% block content %}
+{% include "partials/project_nav.html" %}
+<h2>Logs</h2>
+
+<form hx-get="/{{ project_id }}/logs/stream" hx-target="#log-body" hx-swap="innerHTML" hx-trigger="change" style="display:flex;gap:1rem;align-items:end;margin-bottom:1rem">
+  <label style="flex:0 0 auto">
+    Level
+    <select name="level">
+      <option value="">All</option>
+      <option value="debug"{% match current_level %}{% when Some with (l) %}{% if l == "debug" %} selected{% endif %}{% when None %}{% endmatch %}>debug</option>
+      <option value="info"{% match current_level %}{% when Some with (l) %}{% if l == "info" %} selected{% endif %}{% when None %}{% endmatch %}>info</option>
+      <option value="warning"{% match current_level %}{% when Some with (l) %}{% if l == "warning" %} selected{% endif %}{% when None %}{% endmatch %}>warning</option>
+      <option value="error"{% match current_level %}{% when Some with (l) %}{% if l == "error" %} selected{% endif %}{% when None %}{% endmatch %}>error</option>
+      <option value="fatal"{% match current_level %}{% when Some with (l) %}{% if l == "fatal" %} selected{% endif %}{% when None %}{% endmatch %}>fatal</option>
+    </select>
+  </label>
+  <label style="flex:1">
+    Search
+    <input type="search" name="search" value="{{ current_search }}" placeholder="Search messages..." />
+  </label>
+  <button type="submit">Filter</button>
+</form>
+
+<table>
+  <thead>
+    <tr>
+      <th>Level</th>
+      <th>Message</th>
+      <th>Time</th>
+    </tr>
+  </thead>
+  <tbody id="log-body"
+         hx-get="/{{ project_id }}/logs/stream?level={{ current_level.as_deref().unwrap_or_default() }}&search={{ current_search }}"
+         hx-trigger="every 5s"
+         hx-swap="innerHTML">
+    {% for log in logs %}
+    {% include "partials/log_row.html" %}
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

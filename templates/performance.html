@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Performance — light-sentry{% endblock %}
+{% block content %}
+{% include "partials/project_nav.html" %}
+<h2>Performance</h2>
+
+{% if transactions.is_empty() %}
+  <p>No transactions recorded yet.</p>
+{% else %}
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Count</th>
+      <th>P50 (ms)</th>
+      <th>P95 (ms)</th>
+      <th>Last Seen</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for t in transactions %}
+    <tr>
+      <td><a href="/{{ project_id }}/performance/{{ t.name }}">{{ t.name }}</a></td>
+      <td>{{ t.count }}</td>
+      <td>{% match t.p50 %}{% when Some with (v) %}{{ v|fmt("{:.1}") }}{% when None %}—{% endmatch %}</td>
+      <td>{% match t.p95 %}{% when Some with (v) %}{{ v|fmt("{:.1}") }}{% when None %}—{% endmatch %}</td>
+      <td>{% match t.last_seen %}{% when Some with (ts) %}{{ ts.format("%Y-%m-%d %H:%M") }}{% when None %}—{% endmatch %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

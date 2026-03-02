@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ txn_name }} — Performance — light-sentry{% endblock %}
+{% block content %}
+{% include "partials/project_nav.html" %}
+<h2>{{ txn_name }}</h2>
+
+<h3>Recent Transactions</h3>
+{% if transactions.is_empty() %}
+  <p>No transactions.</p>
+{% else %}
+<table>
+  <thead>
+    <tr>
+      <th>Event ID</th>
+      <th>Duration (ms)</th>
+      <th>Status</th>
+      <th>Received</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for t in transactions %}
+    <tr>
+      <td><code>{{ t.event_id }}</code></td>
+      <td>{{ t.duration_ms|fmt("{:.1}") }}</td>
+      <td>{{ t.status }}</td>
+      <td>{{ t.received_at.format("%Y-%m-%d %H:%M:%S") }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if !spans.is_empty() %}
+<h3>Spans (latest transaction)</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Op</th>
+      <th>Description</th>
+      <th>Duration (ms)</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for s in spans %}
+    <tr>
+      <td><code>{{ s.op }}</code></td>
+      <td>{{ s.description }}</td>
+      <td>{% match s.duration_ms %}{% when Some with (v) %}{{ v|fmt("{:.1}") }}{% when None %}—{% endmatch %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

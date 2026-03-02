@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Projects — light-sentry{% endblock %}
+{% block content %}
+<h2>Projects</h2>
+<a href="/projects/new" role="button">New Project</a>
+
+{% if projects.is_empty() %}
+  <p>No projects yet. Create your first project to get started.</p>
+{% else %}
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>DSN</th>
+      <th>Created</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in projects %}
+    <tr>
+      <td><a href="/{{ p.id }}/issues">{{ p.name }}</a></td>
+      <td><code style="font-size:0.75rem">http://{{ p.dsn_public }}@{{ host }}/{{ p.id }}</code></td>
+      <td>{{ p.created_at.format("%Y-%m-%d %H:%M") }}</td>
+      <td>
+        <a href="/{{ p.id }}/issues">Issues</a> |
+        <a href="/{{ p.id }}/performance">Performance</a> |
+        <a href="/{{ p.id }}/logs">Logs</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

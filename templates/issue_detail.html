@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}{{ issue.title }} — light-sentry{% endblock %}
+{% block content %}
+{% include "partials/project_nav.html" %}
+<h2>{{ issue.title }}</h2>
+<p>
+  <span class="badge badge-{{ issue.level }}">{{ issue.level }}</span>
+  {{ issue.count }} events
+  {% match issue.last_seen %}{% when Some with (ts) %} — last seen {{ ts.format("%Y-%m-%d %H:%M:%S") }}{% when None %}{% endmatch %}
+</p>
+
+{% if !frames.is_empty() %}
+<h3>Stack Trace</h3>
+<table>
+  <thead>
+    <tr>
+      <th>File</th>
+      <th>Line</th>
+      <th>Function</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for frame in frames %}
+    <tr>
+      <td>{{ frame.filename }}</td>
+      <td>{{ frame.lineno }}</td>
+      <td><code>{{ frame.function }}</code></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<h3>Recent Events</h3>
+{% if events.is_empty() %}
+  <p>No events.</p>
+{% else %}
+<table>
+  <thead>
+    <tr>
+      <th>Event ID</th>
+      <th>Message</th>
+      <th>Received</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for ev in events %}
+    <tr>
+      <td><code>{{ ev.event_id }}</code></td>
+      <td>{{ ev.message }}</td>
+      <td>{{ ev.received_at.format("%Y-%m-%d %H:%M:%S") }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

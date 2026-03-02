@@ -40,6 +40,7 @@ async fn main() -> anyhow::Result<()> {
 
     let app = Router::new()
         .route("/health", get(|| async { "ok" }))
+        .route("/", get(|| async { axum::response::Redirect::to("/projects") }))
         .route(
             "/api/{project_id}/store/",
             post(ingest::store::store_event),
@@ -51,6 +52,14 @@ async fn main() -> anyhow::Result<()> {
         .route("/login", get(routes::auth::login_page).post(routes::auth::login_submit))
         .route("/register", get(routes::auth::register_page).post(routes::auth::register_submit))
         .route("/logout", post(routes::auth::logout))
+        .route("/projects", get(routes::projects::list).post(routes::projects::create))
+        .route("/projects/new", get(routes::projects::new_form))
+        .route("/{project_id}/issues", get(routes::issues::list))
+        .route("/{project_id}/issues/{fingerprint}", get(routes::issues::detail))
+        .route("/{project_id}/performance", get(routes::performance::list))
+        .route("/{project_id}/performance/{name}", get(routes::performance::detail))
+        .route("/{project_id}/logs", get(routes::logs::list))
+        .route("/{project_id}/logs/stream", get(routes::logs::stream))
         .with_state(state)
         .layer(session_layer)
         .layer(TraceLayer::new_for_http());
