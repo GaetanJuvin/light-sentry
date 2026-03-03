@@ -67,6 +67,9 @@ struct LogsTemplate {
     total_count: i64,
     histogram: Vec<HistogramBar>,
     chart_width: i64,
+    max_count: i64,
+    first_label: String,
+    last_label: String,
 }
 
 #[derive(Template)]
@@ -101,6 +104,8 @@ pub async fn list(
 
     let raw_histogram = fetch_histogram(&state.db, project_id, level, search).await;
     let max_count = raw_histogram.iter().map(|b| b.count).max().unwrap_or(0);
+    let first_label = raw_histogram.first().map(|b| b.bucket.format("%H:%M").to_string()).unwrap_or_default();
+    let last_label = raw_histogram.last().map(|b| b.bucket.format("%H:%M").to_string()).unwrap_or_default();
     let histogram: Vec<HistogramBar> = raw_histogram
         .iter()
         .enumerate()
@@ -130,6 +135,9 @@ pub async fn list(
         total_count,
         histogram,
         chart_width,
+        max_count,
+        first_label,
+        last_label,
     })
 }
 

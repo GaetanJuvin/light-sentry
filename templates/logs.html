@@ -7,18 +7,30 @@
 {% if !histogram.is_empty() %}
 <div style="margin-bottom:1.5rem">
   <h3 style="margin-bottom:0.5rem;font-size:0.9rem;color:#666">Log volume (last hour)</h3>
-  <svg width="100%" height="80" viewBox="0 0 {{ chart_width }} 80" preserveAspectRatio="none" style="background:#f8f8f8;border:1px solid #ddd;border-radius:4px">
-    {% for bar in histogram %}
-    <a href="/{{ project_id }}/logs?level={{ current_level.as_deref().unwrap_or_default() }}&search={{ current_search }}&page=1"
-       hx-get="/{{ project_id }}/logs/stream?level={{ current_level.as_deref().unwrap_or_default() }}&search={{ current_search }}&page=1"
-       hx-target="#log-table-wrapper"
-       hx-swap="innerHTML">
-      <title>{{ bar.label }} — {{ bar.count }} logs</title>
-      <rect x="{{ bar.x }}" y="{{ 75 - bar.bar_height }}" width="12" height="{{ bar.bar_height }}" fill="#4a90d9" rx="1">
-      </rect>
-    </a>
-    {% endfor %}
-  </svg>
+  <div style="display:flex;align-items:stretch">
+    <div style="display:flex;flex-direction:column;justify-content:space-between;padding-right:0.5rem;font-size:0.7rem;color:#888;text-align:right;min-width:1.5rem">
+      <span>{{ max_count }}</span>
+      <span>0</span>
+    </div>
+    <div style="flex:1;min-width:0">
+      <svg width="100%" height="80" viewBox="0 0 {{ chart_width }} 80" preserveAspectRatio="none" style="background:#f8f8f8;border:1px solid #ddd;border-radius:4px">
+        {% for bar in histogram %}
+        <a href="/{{ project_id }}/logs?level={{ current_level.as_deref().unwrap_or_default() }}&search={{ current_search }}&page=1"
+           hx-get="/{{ project_id }}/logs/stream?level={{ current_level.as_deref().unwrap_or_default() }}&search={{ current_search }}&page=1"
+           hx-target="#log-table-wrapper"
+           hx-swap="innerHTML">
+          <title>{{ bar.label }} — {{ bar.count }} logs</title>
+          <rect x="{{ bar.x }}" y="{{ 75 - bar.bar_height }}" width="12" height="{{ bar.bar_height }}" fill="#4a90d9" rx="1">
+          </rect>
+        </a>
+        {% endfor %}
+      </svg>
+      <div style="display:flex;justify-content:space-between;font-size:0.7rem;color:#888;margin-top:0.25rem">
+        <span>{{ first_label }}</span>
+        <span>{{ last_label }}</span>
+      </div>
+    </div>
+  </div>
 </div>
 {% endif %}
 
