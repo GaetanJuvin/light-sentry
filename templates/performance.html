@@ -10,11 +10,19 @@
 <table>
   <thead>
     <tr>
-      <th>Name</th>
-      <th>Count</th>
-      <th>P50 (ms)</th>
-      <th>P95 (ms)</th>
-      <th>Last Seen</th>
+      {% for col in [("name", "Name"), ("count", "Count"), ("p50", "P50 (ms)"), ("p95", "P95 (ms)"), ("last_seen", "Last Seen")] %}
+      <th>
+        {% if sort == col.0 %}
+          <a href="/{{ project_id }}/performance?sort={{ col.0 }}&dir={% if dir == "asc" %}desc{% else %}asc{% endif %}" style="text-decoration:none;color:inherit">
+            {{ col.1 }} {% if dir == "asc" %}&#9650;{% else %}&#9660;{% endif %}
+          </a>
+        {% else %}
+          <a href="/{{ project_id }}/performance?sort={{ col.0 }}&dir=desc" style="text-decoration:none;color:inherit">
+            {{ col.1 }}
+          </a>
+        {% endif %}
+      </th>
+      {% endfor %}
     </tr>
   </thead>
   <tbody>

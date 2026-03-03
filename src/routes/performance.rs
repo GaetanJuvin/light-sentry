@@ -1,8 +1,9 @@
 use askama::Template;
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     response::{Html, IntoResponse, Redirect, Response},
 };
+use serde::Deserialize;
 use tower_sessions::Session;
 
 use crate::{routes::auth::require_user, state::AppState};
@@ -62,11 +63,24 @@ pub struct SpanRow {
     pub duration_ms: Option<f64>,
 }
 
+#[derive(Deserialize, Default)]
+pub struct PerfSort {
+    #[serde(default = "default_sort")]
+    pub sort: String,
+    #[serde(default = "default_dir")]
+    pub dir: String,
+}
+
+fn default_sort() -> String { "p95".into() }
+fn default_dir() -> String { "desc".into() }
+
 #[derive(Template)]
 #[template(path = "performance.html")]
 struct PerformanceTemplate {
     project_id: uuid::Uuid,
     transactions: Vec<PerfDisplay>,
+    sort: String,
+    dir: String,
 }
 
 #[derive(Template)]
@@ -82,12 +96,23 @@ pub async fn list(
     State(state): State<AppState>,
     session: Session,
     Path(project_id): Path<uuid::Uuid>,
+    Query(params): Query<PerfSort>,
 ) -> Response {
     let Some(_user_id) = require_user(&session).await else {
         return Redirect::to("/login").into_response();
     };
 
-    let rows: Vec<PerfQueryRow> = sqlx::query_as(
+    let order_col = match params.sort.as_str() {
+        "name" => "name",
+        "count" => "count",
+        "p50" => "p50",
+        "last_seen" => "last_seen",
+        _ => "p95",
+    };
+    let order_dir = if params.dir == "asc" { "ASC" } else { "DESC" };
+    let nulls = if params.dir == "asc" { "NULLS FIRST" } else { "NULLS LAST" };
+
+    let query = format!(
         "SELECT name, \
                COUNT(*) as count, \
                PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY duration_ms) as p50, \
@@ -96,19 +121,23 @@ pub async fn list(
          FROM transactions \
          WHERE project_id = $1 \
          GROUP BY name \
-         ORDER BY p95 DESC NULLS LAST \
-         LIMIT 100",
-    )
-    .bind(project_id)
-    .fetch_all(&state.db)
-    .await
-    .unwrap_or_default();
+         ORDER BY {order_col} {order_dir} {nulls} \
+         LIMIT 100"
+    );
+
+    let rows: Vec<PerfQueryRow> = sqlx::query_as(&query)
+        .bind(project_id)
+        .fetch_all(&state.db)
+        .await
+        .unwrap_or_default();
 
     let transactions: Vec<PerfDisplay> = rows.into_iter().map(PerfDisplay::from).collect();
 
     render(PerformanceTemplate {
         project_id,
         transactions,
+        sort: params.sort,
+        dir: params.dir,
     })
 }
 
