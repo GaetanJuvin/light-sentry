@@ -39,7 +39,7 @@ async fn main() -> anyhow::Result<()> {
     let session_store = MemoryStore::default();
     let session_layer = SessionManagerLayer::new(session_store)
         .with_secure(false)
-        .with_expiry(Expiry::OnInactivity(Duration::hours(2)));
+        .with_expiry(Expiry::OnInactivity(Duration::days(365)));
 
     let app = Router::new()
         .route("/health", get(|| async { "ok" }))
