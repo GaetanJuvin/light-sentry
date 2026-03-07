@@ -1,5 +1,17 @@
-<tr>
-  <td><span class="badge badge-{{ log.level }}">{{ log.level }}</span></td>
-  <td>{{ log.message }}</td>
-  <td>{{ log.received_at.format("%Y-%m-%d %H:%M:%S") }}</td>
+<tr class="border-b border-border hover:bg-muted/50 transition-colors">
+  <td class="px-4 py-2">
+    {% if log.level == "error" %}
+    <span class="inline-flex items-center rounded-md bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-400 ring-1 ring-inset ring-red-500/20">{{ log.level }}</span>
+    {% else if log.level == "warning" %}
+    <span class="inline-flex items-center rounded-md bg-yellow-500/10 px-2 py-0.5 text-xs font-medium text-yellow-400 ring-1 ring-inset ring-yellow-500/20">{{ log.level }}</span>
+    {% else if log.level == "info" %}
+    <span class="inline-flex items-center rounded-md bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-400 ring-1 ring-inset ring-blue-500/20">{{ log.level }}</span>
+    {% else if log.level == "fatal" %}
+    <span class="inline-flex items-center rounded-md bg-red-900/50 px-2 py-0.5 text-xs font-medium text-red-300 ring-1 ring-inset ring-red-700/30">{{ log.level }}</span>
+    {% else %}
+    <span class="inline-flex items-center rounded-md bg-zinc-500/10 px-2 py-0.5 text-xs font-medium text-zinc-400 ring-1 ring-inset ring-zinc-500/20">{{ log.level }}</span>
+    {% endif %}
+  </td>
+  <td class="px-4 py-2 text-sm text-foreground">{{ log.message }}</td>
+  <td class="px-4 py-2 text-sm text-muted-foreground whitespace-nowrap">{{ log.received_at.format("%Y-%m-%d %H:%M:%S") }}</td>
 </tr>

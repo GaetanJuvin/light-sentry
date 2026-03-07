@@ -24,6 +24,7 @@ struct IssueQueryRow {
     level: Option<String>,
     count: Option<i64>,
     last_seen: Option<chrono::DateTime<chrono::Utc>>,
+    last_context: Option<serde_json::Value>,
 }
 
 /// Template-friendly version with no Option fields for direct display
@@ -33,16 +34,34 @@ pub struct IssueDisplay {
     pub level: String,
     pub count: i64,
     pub last_seen: Option<chrono::DateTime<chrono::Utc>>,
+    pub request_path: Option<String>,
 }
 
 impl From<IssueQueryRow> for IssueDisplay {
     fn from(row: IssueQueryRow) -> Self {
+        let request_path = row
+            .last_context
+            .as_ref()
+            .and_then(|ctx| ctx.get("request"))
+            .and_then(|req| req.get("url"))
+            .and_then(|v| v.as_str())
+            .map(|url| {
+                // Extract path from URL: skip "https://host" prefix
+                if let Some(pos) = url.find("://") {
+                    if let Some(path_start) = url[pos + 3..].find('/') {
+                        return url[pos + 3 + path_start..].to_string();
+                    }
+                }
+                url.to_string()
+            });
+
         Self {
             fingerprint: row.fingerprint,
             title: row.title.unwrap_or_else(|| "(unknown)".into()),
             level: row.level.unwrap_or_else(|| "error".into()),
             count: row.count.unwrap_or(0),
             last_seen: row.last_seen,
+            request_path,
         }
     }
 }
@@ -52,7 +71,28 @@ pub struct EventRow {
     pub event_id: String,
     pub message: String,
     pub stack_trace: Option<serde_json::Value>,
+    pub context: Option<serde_json::Value>,
     pub received_at: chrono::DateTime<chrono::Utc>,
+}
+
+impl EventRow {
+    pub fn request_url(&self) -> Option<String> {
+        self.context
+            .as_ref()?
+            .get("request")?
+            .get("url")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+    }
+
+    pub fn request_method(&self) -> Option<String> {
+        self.context
+            .as_ref()?
+            .get("request")?
+            .get("method")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+    }
 }
 
 pub struct StackFrame {
@@ -65,16 +105,20 @@ pub struct StackFrame {
 #[template(path = "issues.html")]
 struct IssuesTemplate {
     project_id: uuid::Uuid,
+    project_name: String,
     issues: Vec<IssueDisplay>,
+    active_tab: &'static str,
 }
 
 #[derive(Template)]
 #[template(path = "issue_detail.html")]
 struct IssueDetailTemplate {
     project_id: uuid::Uuid,
+    project_name: String,
     issue: IssueDisplay,
     frames: Vec<StackFrame>,
     events: Vec<EventRow>,
+    active_tab: &'static str,
 }
 
 pub async fn list(
@@ -86,15 +130,26 @@ pub async fn list(
         return Redirect::to("/login").into_response();
     };
 
+    let project_name: String = sqlx::query_scalar("SELECT name FROM projects WHERE id = $1")
+        .bind(project_id)
+        .fetch_optional(&state.db)
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| "Project".into());
+
     let rows: Vec<IssueQueryRow> = sqlx::query_as(
-        "SELECT fingerprint, \
-               MAX(title) as title, \
-               MAX(level) as level, \
+        "SELECT e.fingerprint, \
+               MAX(e.title) as title, \
+               MAX(e.level) as level, \
                COUNT(*) as count, \
-               MAX(received_at) as last_seen \
-         FROM error_events \
-         WHERE project_id = $1 \
-         GROUP BY fingerprint \
+               MAX(e.received_at) as last_seen, \
+               (SELECT context FROM error_events e2 \
+                WHERE e2.fingerprint = e.fingerprint AND e2.project_id = $1 \
+                ORDER BY e2.received_at DESC LIMIT 1) as last_context \
+         FROM error_events e \
+         WHERE e.project_id = $1 \
+         GROUP BY e.fingerprint \
          ORDER BY last_seen DESC \
          LIMIT 100",
     )
@@ -105,7 +160,7 @@ pub async fn list(
 
     let issues: Vec<IssueDisplay> = rows.into_iter().map(IssueDisplay::from).collect();
 
-    render(IssuesTemplate { project_id, issues })
+    render(IssuesTemplate { project_id, project_name, issues, active_tab: "issues" })
 }
 
 pub async fn detail(
@@ -117,16 +172,28 @@ pub async fn detail(
         return Redirect::to("/login").into_response();
     };
 
+    // Get project name
+    let project_name: String = sqlx::query_scalar("SELECT name FROM projects WHERE id = $1")
+        .bind(project_id)
+        .fetch_optional(&state.db)
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| "Project".into());
+
     // Get issue summary
     let row: Option<IssueQueryRow> = sqlx::query_as(
-        "SELECT fingerprint, \
-               MAX(title) as title, \
-               MAX(level) as level, \
+        "SELECT e.fingerprint, \
+               MAX(e.title) as title, \
+               MAX(e.level) as level, \
                COUNT(*) as count, \
-               MAX(received_at) as last_seen \
-         FROM error_events \
-         WHERE project_id = $1 AND fingerprint = $2 \
-         GROUP BY fingerprint",
+               MAX(e.received_at) as last_seen, \
+               (SELECT context FROM error_events e2 \
+                WHERE e2.fingerprint = e.fingerprint AND e2.project_id = $1 \
+                ORDER BY e2.received_at DESC LIMIT 1) as last_context \
+         FROM error_events e \
+         WHERE e.project_id = $1 AND e.fingerprint = $2 \
+         GROUP BY e.fingerprint",
     )
     .bind(project_id)
     .bind(&fingerprint)
@@ -143,7 +210,7 @@ pub async fn detail(
 
     // Get recent events
     let events: Vec<EventRow> = sqlx::query_as(
-        "SELECT event_id, message, stack_trace, received_at \
+        "SELECT event_id, message, stack_trace, context, received_at \
          FROM error_events \
          WHERE project_id = $1 AND fingerprint = $2 \
          ORDER BY received_at DESC \
@@ -160,9 +227,11 @@ pub async fn detail(
 
     render(IssueDetailTemplate {
         project_id,
+        project_name,
         issue,
         frames,
         events,
+        active_tab: "issues",
     })
 }
 

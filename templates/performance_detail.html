@@ -2,53 +2,66 @@
 {% block title %}{{ txn_name }} — Performance — light-sentry{% endblock %}
 {% block content %}
 {% include "partials/project_nav.html" %}
-<h2>{{ txn_name }}</h2>
+<nav class="flex items-center gap-1.5 text-sm text-muted-foreground mb-4">
+  <a href="/projects" class="hover:text-foreground transition-colors">Projects</a>
+  <span class="text-muted-foreground/50">/</span>
+  <a href="/{{ project_id }}/issues" class="hover:text-foreground transition-colors">{{ project_name }}</a>
+  <span class="text-muted-foreground/50">/</span>
+  <a href="/{{ project_id }}/performance" class="hover:text-foreground transition-colors">Performance</a>
+  <span class="text-muted-foreground/50">/</span>
+  <span class="text-foreground truncate max-w-md">{{ txn_name }}</span>
+</nav>
+<h2 class="text-lg font-semibold text-foreground mb-4">{{ txn_name }}</h2>
 
-<h3>Recent Transactions</h3>
+<h3 class="text-sm font-semibold text-foreground mb-3">Recent Transactions</h3>
 {% if transactions.is_empty() %}
-  <p>No transactions.</p>
+  <p class="text-sm text-muted-foreground">No transactions.</p>
 {% else %}
-<table>
-  <thead>
-    <tr>
-      <th>Event ID</th>
-      <th>Duration (ms)</th>
-      <th>Status</th>
-      <th>Received</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for t in transactions %}
-    <tr>
-      <td><code>{{ t.event_id }}</code></td>
-      <td>{{ t.duration_ms|fmt("{:.1}") }}</td>
-      <td>{{ t.status }}</td>
-      <td>{{ t.received_at.format("%Y-%m-%d %H:%M:%S") }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="rounded-lg border border-border mb-6">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-border">
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Event ID</th>
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Duration (ms)</th>
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Status</th>
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Received</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in transactions %}
+      <tr class="border-b border-border last:border-0 hover:bg-muted/50 transition-colors">
+        <td class="px-4 py-2"><code class="text-xs text-muted-foreground">{{ t.event_id }}</code></td>
+        <td class="px-4 py-2 text-muted-foreground">{{ t.duration_ms|fmt("{:.1}") }}</td>
+        <td class="px-4 py-2 text-muted-foreground">{{ t.status }}</td>
+        <td class="px-4 py-2 text-muted-foreground whitespace-nowrap">{{ t.received_at.format("%Y-%m-%d %H:%M:%S") }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endif %}
 
 {% if !spans.is_empty() %}
-<h3>Spans (latest transaction)</h3>
-<table>
-  <thead>
-    <tr>
-      <th>Op</th>
-      <th>Description</th>
-      <th>Duration (ms)</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for s in spans %}
-    <tr>
-      <td><code>{{ s.op }}</code></td>
-      <td>{{ s.description }}</td>
-      <td>{% match s.duration_ms %}{% when Some with (v) %}{{ v|fmt("{:.1}") }}{% when None %}—{% endmatch %}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<h3 class="text-sm font-semibold text-foreground mb-3">Spans (latest transaction)</h3>
+<div class="rounded-lg border border-border">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-border">
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Op</th>
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Description</th>
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Duration (ms)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in spans %}
+      <tr class="border-b border-border last:border-0 hover:bg-muted/50 transition-colors">
+        <td class="px-4 py-2"><code class="text-xs text-foreground">{{ s.op }}</code></td>
+        <td class="px-4 py-2 text-muted-foreground">{{ s.description }}</td>
+        <td class="px-4 py-2 text-muted-foreground">{% match s.duration_ms %}{% when Some with (v) %}{{ v|fmt("{:.1}") }}{% when None %}—{% endmatch %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endif %}
 {% endblock %}

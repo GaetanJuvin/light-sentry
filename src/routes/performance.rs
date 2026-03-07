@@ -78,18 +78,22 @@ fn default_dir() -> String { "desc".into() }
 #[template(path = "performance.html")]
 struct PerformanceTemplate {
     project_id: uuid::Uuid,
+    project_name: String,
     transactions: Vec<PerfDisplay>,
     sort: String,
     dir: String,
+    active_tab: &'static str,
 }
 
 #[derive(Template)]
 #[template(path = "performance_detail.html")]
 struct PerformanceDetailTemplate {
     project_id: uuid::Uuid,
+    project_name: String,
     txn_name: String,
     transactions: Vec<TransactionRow>,
     spans: Vec<SpanRow>,
+    active_tab: &'static str,
 }
 
 pub async fn list(
@@ -101,6 +105,14 @@ pub async fn list(
     let Some(_user_id) = require_user(&session).await else {
         return Redirect::to("/login").into_response();
     };
+
+    let project_name: String = sqlx::query_scalar("SELECT name FROM projects WHERE id = $1")
+        .bind(project_id)
+        .fetch_optional(&state.db)
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| "Project".into());
 
     let order_col = match params.sort.as_str() {
         "name" => "name",
@@ -135,9 +147,11 @@ pub async fn list(
 
     render(PerformanceTemplate {
         project_id,
+        project_name,
         transactions,
         sort: params.sort,
         dir: params.dir,
+        active_tab: "performance",
     })
 }
 
@@ -149,6 +163,14 @@ pub async fn detail(
     let Some(_user_id) = require_user(&session).await else {
         return Redirect::to("/login").into_response();
     };
+
+    let project_name: String = sqlx::query_scalar("SELECT name FROM projects WHERE id = $1")
+        .bind(project_id)
+        .fetch_optional(&state.db)
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| "Project".into());
 
     let transactions: Vec<TransactionRow> = sqlx::query_as(
         "SELECT event_id, duration_ms, status, spans, received_at \
@@ -168,9 +190,11 @@ pub async fn detail(
 
     render(PerformanceDetailTemplate {
         project_id,
+        project_name,
         txn_name: name,
         transactions,
         spans,
+        active_tab: "performance",
     })
 }
 

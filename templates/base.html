@@ -1,38 +1,54 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{% block title %}light-sentry{% endblock %}</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            background: '#09090b',
+            foreground: '#fafafa',
+            card: '#09090b',
+            'card-foreground': '#fafafa',
+            muted: '#27272a',
+            'muted-foreground': '#a1a1aa',
+            border: '#27272a',
+            input: '#27272a',
+            primary: '#fafafa',
+            'primary-foreground': '#18181b',
+            secondary: '#27272a',
+            'secondary-foreground': '#fafafa',
+            accent: '#27272a',
+            'accent-foreground': '#fafafa',
+            ring: '#d4d4d8',
+          },
+        },
+      },
+    }
+  </script>
   <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
-  <style>
-    :root { --pico-font-size: 14px; }
-    nav { padding: 0.5rem 1rem; }
-    .container { max-width: 1200px; margin: 0 auto; padding: 1rem; }
-    table { font-size: 0.9rem; }
-    .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
-    .badge-error { background: #fee; color: #c00; }
-    .badge-warning { background: #fff3cd; color: #856404; }
-    .badge-fatal { background: #c00; color: #fff; }
-    .badge-info { background: #d1ecf1; color: #0c5460; }
-    .badge-debug { background: #e2e3e5; color: #383d41; }
-  </style>
   {% block head %}{% endblock %}
 </head>
-<body>
+<body class="bg-background text-foreground min-h-screen antialiased">
   {% block nav %}
-  <nav class="container">
-    <ul>
-      <li><strong><a href="/projects">light-sentry</a></strong></li>
-    </ul>
-    <ul>
-      <li><a href="/projects">Projects</a></li>
-      <li><form method="post" action="/logout" style="margin:0"><button type="submit" class="outline secondary" style="margin:0;padding:0.25rem 0.75rem">Logout</button></form></li>
-    </ul>
+  <nav class="border-b border-border">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-14">
+      <a href="/projects" class="text-sm font-semibold tracking-tight text-foreground hover:text-foreground/80">light-sentry</a>
+      <div class="flex items-center gap-4">
+        <a href="/projects" class="text-sm text-muted-foreground hover:text-foreground transition-colors">Projects</a>
+        <form method="post" action="/logout">
+          <button type="submit" class="text-sm text-muted-foreground hover:text-foreground transition-colors">Logout</button>
+        </form>
+      </div>
+    </div>
   </nav>
   {% endblock %}
-  <main class="container">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
     {% block content %}{% endblock %}
   </main>
 </body>

@@ -2,30 +2,39 @@
 {% block title %}Logs — light-sentry{% endblock %}
 {% block content %}
 {% include "partials/project_nav.html" %}
-<h2>Logs</h2>
+<nav class="flex items-center gap-1.5 text-sm text-muted-foreground mb-4">
+  <a href="/projects" class="hover:text-foreground transition-colors">Projects</a>
+  <span class="text-muted-foreground/50">/</span>
+  <a href="/{{ project_id }}/issues" class="hover:text-foreground transition-colors">{{ project_name }}</a>
+  <span class="text-muted-foreground/50">/</span>
+  <span class="text-foreground">Logs</span>
+</nav>
+<h2 class="text-lg font-semibold text-foreground mb-4">Logs</h2>
 
 {% if !histogram.is_empty() %}
-<div style="margin-bottom:1.5rem">
-  <h3 style="margin-bottom:0.5rem;font-size:0.9rem;color:#666">Log volume (last hour)</h3>
-  <div style="display:flex;align-items:stretch">
-    <div style="display:flex;flex-direction:column;justify-content:space-between;padding-right:0.5rem;font-size:0.7rem;color:#888;text-align:right;min-width:1.5rem">
+<div class="mb-6">
+  <h3 class="mb-2 text-xs font-medium text-muted-foreground">Log volume (last hour)</h3>
+  <div class="flex items-stretch">
+    <div class="flex flex-col justify-between pr-2 text-[10px] text-muted-foreground text-right min-w-[1.5rem]">
       <span>{{ max_count }}</span>
       <span>0</span>
     </div>
-    <div style="flex:1;min-width:0">
-      <svg width="100%" height="80" viewBox="0 0 {{ chart_width }} 80" preserveAspectRatio="none" style="background:#f8f8f8;border:1px solid #ddd;border-radius:4px">
-        {% for bar in histogram %}
-        <a href="/{{ project_id }}/logs?level={{ current_level.as_deref().unwrap_or_default() }}&search={{ current_search }}&page=1"
-           hx-get="/{{ project_id }}/logs/stream?level={{ current_level.as_deref().unwrap_or_default() }}&search={{ current_search }}&page=1"
-           hx-target="#log-table-wrapper"
-           hx-swap="innerHTML">
-          <title>{{ bar.label }} — {{ bar.count }} logs</title>
-          <rect x="{{ bar.x }}" y="{{ 75 - bar.bar_height }}" width="12" height="{{ bar.bar_height }}" fill="#4a90d9" rx="1">
-          </rect>
-        </a>
-        {% endfor %}
-      </svg>
-      <div style="display:flex;justify-content:space-between;font-size:0.7rem;color:#888;margin-top:0.25rem">
+    <div class="flex-1 min-w-0">
+      <div class="rounded-md border border-border overflow-hidden">
+        <svg width="100%" height="80" viewBox="0 0 {{ chart_width }} 80" preserveAspectRatio="none" style="background:#18181b;display:block">
+          {% for bar in histogram %}
+          <a href="/{{ project_id }}/logs?level={{ current_level.as_deref().unwrap_or_default() }}&search={{ current_search }}&page=1"
+             hx-get="/{{ project_id }}/logs/stream?level={{ current_level.as_deref().unwrap_or_default() }}&search={{ current_search }}&page=1"
+             hx-target="#log-table-wrapper"
+             hx-swap="innerHTML">
+            <title>{{ bar.label }} — {{ bar.count }} logs</title>
+            <rect x="{{ bar.x }}" y="{{ 75 - bar.bar_height }}" width="12" height="{{ bar.bar_height }}" fill="#3b82f6" rx="1">
+            </rect>
+          </a>
+          {% endfor %}
+        </svg>
+      </div>
+      <div class="flex justify-between text-[10px] text-muted-foreground mt-1">
         <span>{{ first_label }}</span>
         <span>{{ last_label }}</span>
       </div>
@@ -34,10 +43,10 @@
 </div>
 {% endif %}
 
-<form hx-get="/{{ project_id }}/logs/stream" hx-target="#log-table-wrapper" hx-swap="innerHTML" hx-trigger="change" hx-vals='{"page": "1"}' style="display:flex;gap:1rem;align-items:end;margin-bottom:1rem">
-  <label style="flex:0 0 auto">
-    Level
-    <select name="level">
+<form hx-get="/{{ project_id }}/logs/stream" hx-target="#log-table-wrapper" hx-swap="innerHTML" hx-trigger="change" hx-vals='{"page": "1"}' class="flex gap-3 items-end mb-4">
+  <div class="flex-none">
+    <label class="block text-xs font-medium text-muted-foreground mb-1.5">Level</label>
+    <select name="level" class="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
       <option value="">All</option>
       <option value="debug"{% match current_level %}{% when Some with (l) %}{% if l == "debug" %} selected{% endif %}{% when None %}{% endmatch %}>debug</option>
       <option value="info"{% match current_level %}{% when Some with (l) %}{% if l == "info" %} selected{% endif %}{% when None %}{% endmatch %}>info</option>
@@ -45,56 +54,60 @@
       <option value="error"{% match current_level %}{% when Some with (l) %}{% if l == "error" %} selected{% endif %}{% when None %}{% endmatch %}>error</option>
       <option value="fatal"{% match current_level %}{% when Some with (l) %}{% if l == "fatal" %} selected{% endif %}{% when None %}{% endmatch %}>fatal</option>
     </select>
-  </label>
-  <label style="flex:1">
-    Search
-    <input type="search" name="search" value="{{ current_search }}" placeholder="Search messages..." />
-  </label>
-  <button type="submit">Filter</button>
+  </div>
+  <div class="flex-1">
+    <label class="block text-xs font-medium text-muted-foreground mb-1.5">Search</label>
+    <input type="search" name="search" value="{{ current_search }}" placeholder="Search messages..." class="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
+  </div>
+  <button type="submit" class="h-9 rounded-md border border-input bg-background px-4 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors">Filter</button>
 </form>
 
 <div id="log-table-wrapper">
-<table>
-  <thead>
-    <tr>
-      <th>Level</th>
-      <th>Message</th>
-      <th>Time</th>
-    </tr>
-  </thead>
-  <tbody id="log-body"
-         {% if page == 1 %}
-         hx-get="/{{ project_id }}/logs/stream?level={{ current_level.as_deref().unwrap_or_default() }}&search={{ current_search }}&page=1"
-         hx-trigger="every 5s"
-         hx-target="#log-table-wrapper"
-         hx-swap="innerHTML"
-         {% endif %}>
-    {% for log in logs %}
-    {% include "partials/log_row.html" %}
-    {% endfor %}
-  </tbody>
-</table>
+<div class="rounded-lg border border-border">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-border">
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Level</th>
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Message</th>
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Time</th>
+      </tr>
+    </thead>
+    <tbody id="log-body"
+           {% if page == 1 %}
+           hx-get="/{{ project_id }}/logs/stream?level={{ current_level.as_deref().unwrap_or_default() }}&search={{ current_search }}&page=1"
+           hx-trigger="every 5s"
+           hx-target="#log-table-wrapper"
+           hx-swap="innerHTML"
+           {% endif %}>
+      {% for log in logs %}
+      {% include "partials/log_row.html" %}
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 
-<div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem">
-  <span style="color:#666;font-size:0.9rem">{{ total_count }} logs total — page {{ page }} of {{ total_pages }}</span>
-  <div style="display:flex;gap:0.5rem">
+<div class="flex items-center justify-between mt-4">
+  <span class="text-sm text-muted-foreground">{{ total_count }} logs total — page {{ page }} of {{ total_pages }}</span>
+  <div class="flex gap-2">
     {% if page > 1 %}
     <button hx-get="/{{ project_id }}/logs/stream?level={{ current_level.as_deref().unwrap_or_default() }}&search={{ current_search }}&page={{ page - 1 }}"
             hx-target="#log-table-wrapper"
-            hx-swap="innerHTML">
+            hx-swap="innerHTML"
+            class="h-8 rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
       Prev
     </button>
     {% else %}
-    <button disabled>Prev</button>
+    <button disabled class="h-8 rounded-md border border-input bg-background px-3 text-sm font-medium text-muted-foreground opacity-50 cursor-not-allowed">Prev</button>
     {% endif %}
     {% if page < total_pages %}
     <button hx-get="/{{ project_id }}/logs/stream?level={{ current_level.as_deref().unwrap_or_default() }}&search={{ current_search }}&page={{ page + 1 }}"
             hx-target="#log-table-wrapper"
-            hx-swap="innerHTML">
+            hx-swap="innerHTML"
+            class="h-8 rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
       Next
     </button>
     {% else %}
-    <button disabled>Next</button>
+    <button disabled class="h-8 rounded-md border border-input bg-background px-3 text-sm font-medium text-muted-foreground opacity-50 cursor-not-allowed">Next</button>
     {% endif %}
   </div>
 </div>

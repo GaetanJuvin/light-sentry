@@ -1,44 +1,48 @@
-<table>
-  <thead>
-    <tr>
-      <th>Level</th>
-      <th>Message</th>
-      <th>Time</th>
-    </tr>
-  </thead>
-  <tbody id="log-body"
-         {% if page == 1 %}
-         hx-get="/{{ project_id }}/logs/stream?level={{ current_level.as_deref().unwrap_or_default() }}&search={{ current_search }}&page=1"
-         hx-trigger="every 5s"
-         hx-target="#log-table-wrapper"
-         hx-swap="innerHTML"
-         {% endif %}>
-    {% for log in logs %}
-    {% include "partials/log_row.html" %}
-    {% endfor %}
-  </tbody>
-</table>
+<div class="rounded-lg border border-border">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-border">
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Level</th>
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Message</th>
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Time</th>
+      </tr>
+    </thead>
+    <tbody id="log-body"
+           {% if page == 1 %}
+           hx-get="/{{ project_id }}/logs/stream?level={{ current_level.as_deref().unwrap_or_default() }}&search={{ current_search }}&page=1"
+           hx-trigger="every 5s"
+           hx-target="#log-table-wrapper"
+           hx-swap="innerHTML"
+           {% endif %}>
+      {% for log in logs %}
+      {% include "partials/log_row.html" %}
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 
-<div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem">
-  <span style="color:#666;font-size:0.9rem">{{ total_count }} logs total — page {{ page }} of {{ total_pages }}</span>
-  <div style="display:flex;gap:0.5rem">
+<div class="flex items-center justify-between mt-4">
+  <span class="text-sm text-muted-foreground">{{ total_count }} logs total — page {{ page }} of {{ total_pages }}</span>
+  <div class="flex gap-2">
     {% if page > 1 %}
     <button hx-get="/{{ project_id }}/logs/stream?level={{ current_level.as_deref().unwrap_or_default() }}&search={{ current_search }}&page={{ page - 1 }}"
             hx-target="#log-table-wrapper"
-            hx-swap="innerHTML">
+            hx-swap="innerHTML"
+            class="h-8 rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
       Prev
     </button>
     {% else %}
-    <button disabled>Prev</button>
+    <button disabled class="h-8 rounded-md border border-input bg-background px-3 text-sm font-medium text-muted-foreground opacity-50 cursor-not-allowed">Prev</button>
     {% endif %}
     {% if page < total_pages %}
     <button hx-get="/{{ project_id }}/logs/stream?level={{ current_level.as_deref().unwrap_or_default() }}&search={{ current_search }}&page={{ page + 1 }}"
             hx-target="#log-table-wrapper"
-            hx-swap="innerHTML">
+            hx-swap="innerHTML"
+            class="h-8 rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
       Next
     </button>
     {% else %}
-    <button disabled>Next</button>
+    <button disabled class="h-8 rounded-md border border-input bg-background px-3 text-sm font-medium text-muted-foreground opacity-50 cursor-not-allowed">Next</button>
     {% endif %}
   </div>
 </div>
