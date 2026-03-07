@@ -49,7 +49,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/favicon.svg", get(|| async {
             (
                 [("content-type", "image/svg+xml"), ("cache-control", "public, max-age=86400")],
-                "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='7' r='3' fill='#fafafa'/><path d='M16 4L5 9l11-2 11 2z' fill='#fafafa' opacity='.4'/><rect x='13' y='10' width='6' height='3' rx='1' fill='#d4d4d8'/><path d='M14 13h4l1 15H13z' fill='#a1a1aa'/><rect x='11' y='28' width='10' height='2' rx='1' fill='#71717a'/></svg>"
+                "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='#18181b'/><circle cx='16' cy='9' r='2.5' fill='#fafafa'/><path d='M16 6.5L9 10l7-1.5 7 1.5z' fill='#fafafa' opacity='.4'/><rect x='14' y='11.5' width='4' height='2' rx='.5' fill='#d4d4d8'/><path d='M14.5 13.5h3l.75 11h-4.5z' fill='#a1a1aa'/><rect x='12.5' y='24.5' width='7' height='1.5' rx='.75' fill='#71717a'/></svg>"
             )
         }))
         .route("/health", get(|| async { "ok" }))
