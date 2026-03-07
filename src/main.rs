@@ -32,7 +32,11 @@ async fn main() -> anyhow::Result<()> {
 
     sqlx::migrate!("./migrations").run(&pool).await?;
 
-    let state = AppState { db: pool };
+    let registration_enabled = std::env::var("REGISTRATION_ENABLED")
+        .map(|v| v == "true" || v == "1")
+        .unwrap_or(false);
+
+    let state = AppState { db: pool, registration_enabled };
 
     background::spawn_retention_cleanup(state.db.clone());
 
