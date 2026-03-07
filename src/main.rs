@@ -46,6 +46,12 @@ async fn main() -> anyhow::Result<()> {
         .with_expiry(Expiry::OnInactivity(Duration::days(365)));
 
     let app = Router::new()
+        .route("/favicon.svg", get(|| async {
+            (
+                [("content-type", "image/svg+xml"), ("cache-control", "public, max-age=86400")],
+                "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='7' r='3' fill='#fafafa'/><path d='M16 4L5 9l11-2 11 2z' fill='#fafafa' opacity='.4'/><rect x='13' y='10' width='6' height='3' rx='1' fill='#d4d4d8'/><path d='M14 13h4l1 15H13z' fill='#a1a1aa'/><rect x='11' y='28' width='10' height='2' rx='1' fill='#71717a'/></svg>"
+            )
+        }))
         .route("/health", get(|| async { "ok" }))
         .route("/", get(|| async { axum::response::Redirect::to("/projects") }))
         .route(
