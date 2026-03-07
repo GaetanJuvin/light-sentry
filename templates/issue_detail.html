@@ -2,56 +2,83 @@
 {% block title %}{{ issue.title }} — light-sentry{% endblock %}
 {% block content %}
 {% include "partials/project_nav.html" %}
-<h2>{{ issue.title }}</h2>
-<p>
-  <span class="badge badge-{{ issue.level }}">{{ issue.level }}</span>
-  {{ issue.count }} events
-  {% match issue.last_seen %}{% when Some with (ts) %} — last seen {{ ts.format("%Y-%m-%d %H:%M:%S") }}{% when None %}{% endmatch %}
-</p>
+<nav class="flex items-center gap-1.5 text-sm text-muted-foreground mb-4">
+  <a href="/projects" class="hover:text-foreground transition-colors">Projects</a>
+  <span class="text-muted-foreground/50">/</span>
+  <a href="/{{ project_id }}/issues" class="hover:text-foreground transition-colors">{{ project_name }}</a>
+  <span class="text-muted-foreground/50">/</span>
+  <a href="/{{ project_id }}/issues" class="hover:text-foreground transition-colors">Issues</a>
+  <span class="text-muted-foreground/50">/</span>
+  <span class="text-foreground truncate max-w-md">{{ issue.title }}</span>
+</nav>
+<div class="mb-6">
+  <h2 class="text-lg font-semibold text-foreground mb-2">{{ issue.title }}</h2>
+  <div class="flex items-center gap-3 text-sm">
+    {% if issue.level == "error" %}
+    <span class="inline-flex items-center rounded-md bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-400 ring-1 ring-inset ring-red-500/20">{{ issue.level }}</span>
+    {% else if issue.level == "warning" %}
+    <span class="inline-flex items-center rounded-md bg-yellow-500/10 px-2 py-0.5 text-xs font-medium text-yellow-400 ring-1 ring-inset ring-yellow-500/20">{{ issue.level }}</span>
+    {% else if issue.level == "info" %}
+    <span class="inline-flex items-center rounded-md bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-400 ring-1 ring-inset ring-blue-500/20">{{ issue.level }}</span>
+    {% else if issue.level == "fatal" %}
+    <span class="inline-flex items-center rounded-md bg-red-900/50 px-2 py-0.5 text-xs font-medium text-red-300 ring-1 ring-inset ring-red-700/30">{{ issue.level }}</span>
+    {% else %}
+    <span class="inline-flex items-center rounded-md bg-zinc-500/10 px-2 py-0.5 text-xs font-medium text-zinc-400 ring-1 ring-inset ring-zinc-500/20">{{ issue.level }}</span>
+    {% endif %}
+    <span class="text-muted-foreground">{{ issue.count }} events</span>
+    {% match issue.last_seen %}{% when Some with (ts) %}<span class="text-muted-foreground">— last seen {{ ts.format("%Y-%m-%d %H:%M:%S") }}</span>{% when None %}{% endmatch %}
+  </div>
+</div>
 
 {% if !frames.is_empty() %}
-<h3>Stack Trace</h3>
-<table>
-  <thead>
-    <tr>
-      <th>File</th>
-      <th>Line</th>
-      <th>Function</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for frame in frames %}
-    <tr>
-      <td>{{ frame.filename }}</td>
-      <td>{{ frame.lineno }}</td>
-      <td><code>{{ frame.function }}</code></td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<h3 class="text-sm font-semibold text-foreground mb-3">Stack Trace</h3>
+<div class="rounded-lg border border-border mb-6">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-border">
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">File</th>
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Line</th>
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Function</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for frame in frames %}
+      <tr class="border-b border-border last:border-0 hover:bg-muted/50 transition-colors">
+        <td class="px-4 py-2 text-muted-foreground">{{ frame.filename }}</td>
+        <td class="px-4 py-2 text-muted-foreground">{{ frame.lineno }}</td>
+        <td class="px-4 py-2"><code class="text-xs text-foreground">{{ frame.function }}</code></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endif %}
 
-<h3>Recent Events</h3>
+<h3 class="text-sm font-semibold text-foreground mb-3">Recent Events</h3>
 {% if events.is_empty() %}
-  <p>No events.</p>
+  <p class="text-sm text-muted-foreground">No events.</p>
 {% else %}
-<table>
-  <thead>
-    <tr>
-      <th>Event ID</th>
-      <th>Message</th>
-      <th>Received</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for ev in events %}
-    <tr>
-      <td><code>{{ ev.event_id }}</code></td>
-      <td>{{ ev.message }}</td>
-      <td>{{ ev.received_at.format("%Y-%m-%d %H:%M:%S") }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="rounded-lg border border-border">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-border">
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Event ID</th>
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Request</th>
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Message</th>
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Received</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for ev in events %}
+      <tr class="border-b border-border last:border-0 hover:bg-muted/50 transition-colors">
+        <td class="px-4 py-2"><code class="text-xs text-muted-foreground">{{ ev.event_id }}</code></td>
+        <td class="px-4 py-2">{% match ev.request_url() %}{% when Some with (url) %}<code class="text-xs text-muted-foreground">{% match ev.request_method() %}{% when Some with (m) %}{{ m }} {% when None %}{% endmatch %}{{ url }}</code>{% when None %}<span class="text-muted-foreground">—</span>{% endmatch %}</td>
+        <td class="px-4 py-2 text-foreground">{{ ev.message }}</td>
+        <td class="px-4 py-2 text-muted-foreground whitespace-nowrap">{{ ev.received_at.format("%Y-%m-%d %H:%M:%S") }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endif %}
 {% endblock %}

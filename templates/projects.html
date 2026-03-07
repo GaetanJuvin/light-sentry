@@ -1,35 +1,41 @@
 {% extends "base.html" %}
 {% block title %}Projects — light-sentry{% endblock %}
 {% block content %}
-<h2>Projects</h2>
-<a href="/projects/new" role="button">New Project</a>
+<div class="flex items-center justify-between mb-6">
+  <h2 class="text-lg font-semibold text-foreground">Projects</h2>
+  <a href="/projects/new" class="inline-flex items-center h-9 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:bg-primary/90 transition-colors">New Project</a>
+</div>
 
 {% if projects.is_empty() %}
-  <p>No projects yet. Create your first project to get started.</p>
+  <p class="text-sm text-muted-foreground">No projects yet. Create your first project to get started.</p>
 {% else %}
-<table>
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>DSN</th>
-      <th>Created</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for p in projects %}
-    <tr>
-      <td><a href="/{{ p.id }}/issues">{{ p.name }}</a></td>
-      <td><code style="font-size:0.75rem">http://{{ p.dsn_public }}@{{ host }}/{{ p.id }}</code></td>
-      <td>{{ p.created_at.format("%Y-%m-%d %H:%M") }}</td>
-      <td>
-        <a href="/{{ p.id }}/issues">Issues</a> |
-        <a href="/{{ p.id }}/performance">Performance</a> |
-        <a href="/{{ p.id }}/logs">Logs</a>
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="rounded-lg border border-border">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-border">
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Name</th>
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">DSN</th>
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Created</th>
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in projects %}
+      <tr class="border-b border-border last:border-0 hover:bg-muted/50 transition-colors">
+        <td class="px-4 py-3"><a href="/{{ p.id }}/issues" class="text-foreground hover:underline underline-offset-4">{{ p.name }}</a></td>
+        <td class="px-4 py-3"><code class="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">http://{{ p.dsn_public }}@{{ host }}/{{ p.id }}</code></td>
+        <td class="px-4 py-3 text-muted-foreground">{{ p.created_at.format("%Y-%m-%d %H:%M") }}</td>
+        <td class="px-4 py-3">
+          <div class="flex gap-3">
+            <a href="/{{ p.id }}/issues" class="text-muted-foreground hover:text-foreground transition-colors">Issues</a>
+            <a href="/{{ p.id }}/performance" class="text-muted-foreground hover:text-foreground transition-colors">Performance</a>
+            <a href="/{{ p.id }}/logs" class="text-muted-foreground hover:text-foreground transition-colors">Logs</a>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endif %}
 {% endblock %}

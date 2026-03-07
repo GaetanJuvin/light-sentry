@@ -1,7 +1,16 @@
-<nav>
-  <ul>
-    <li><a href="/{{ project_id }}/issues">Issues</a></li>
-    <li><a href="/{{ project_id }}/performance">Performance</a></li>
-    <li><a href="/{{ project_id }}/logs">Logs</a></li>
-  </ul>
-</nav>
+<div class="border-b border-border mb-6">
+  <nav class="flex gap-4">
+    <a href="/{{ project_id }}/issues"
+       class="px-1 py-2 text-sm font-medium border-b-2 transition-colors {% if active_tab == "issues" %}border-foreground text-foreground{% else %}border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground{% endif %}">
+      Issues
+    </a>
+    <a href="/{{ project_id }}/performance"
+       class="px-1 py-2 text-sm font-medium border-b-2 transition-colors {% if active_tab == "performance" %}border-foreground text-foreground{% else %}border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground{% endif %}">
+      Performance
+    </a>
+    <a href="/{{ project_id }}/logs"
+       class="px-1 py-2 text-sm font-medium border-b-2 transition-colors {% if active_tab == "logs" %}border-foreground text-foreground{% else %}border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground{% endif %}">
+      Logs
+    </a>
+  </nav>
+</div>

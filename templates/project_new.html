@@ -1,12 +1,22 @@
 {% extends "base.html" %}
 {% block title %}New Project — light-sentry{% endblock %}
 {% block content %}
-<article style="max-width:500px;margin:2rem auto">
-  <h2>Create Project</h2>
-  <form method="post" action="/projects">
-    <label>Project Name <input type="text" name="name" required autofocus /></label>
-    <button type="submit">Create</button>
-  </form>
-  <small><a href="/projects">Back to projects</a></small>
-</article>
+<nav class="flex items-center gap-1.5 text-sm text-muted-foreground mb-6">
+  <a href="/projects" class="hover:text-foreground transition-colors">Projects</a>
+  <span class="text-muted-foreground/50">/</span>
+  <span class="text-foreground">New Project</span>
+</nav>
+<div class="flex items-center justify-center py-12">
+  <div class="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-sm">
+    <h2 class="text-lg font-semibold text-foreground mb-4">Create Project</h2>
+    <form method="post" action="/projects" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-foreground mb-1.5" for="name">Project Name</label>
+        <input type="text" name="name" id="name" required autofocus class="w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring" />
+      </div>
+      <button type="submit" class="w-full h-9 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">Create</button>
+    </form>
+    <p class="mt-4 text-center text-sm text-muted-foreground"><a href="/projects" class="text-foreground underline underline-offset-4 hover:text-foreground/80">Back to projects</a></p>
+  </div>
+</div>
 {% endblock %}

@@ -2,30 +2,53 @@
 {% block title %}Issues — light-sentry{% endblock %}
 {% block content %}
 {% include "partials/project_nav.html" %}
-<h2>Issues</h2>
+<nav class="flex items-center gap-1.5 text-sm text-muted-foreground mb-4">
+  <a href="/projects" class="hover:text-foreground transition-colors">Projects</a>
+  <span class="text-muted-foreground/50">/</span>
+  <a href="/{{ project_id }}/issues" class="hover:text-foreground transition-colors">{{ project_name }}</a>
+  <span class="text-muted-foreground/50">/</span>
+  <span class="text-foreground">Issues</span>
+</nav>
+<h2 class="text-lg font-semibold text-foreground mb-4">Issues</h2>
 
 {% if issues.is_empty() %}
-  <p>No issues recorded yet.</p>
+  <p class="text-sm text-muted-foreground">No issues recorded yet.</p>
 {% else %}
-<table>
-  <thead>
-    <tr>
-      <th>Title</th>
-      <th>Level</th>
-      <th>Events</th>
-      <th>Last Seen</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for issue in issues %}
-    <tr>
-      <td><a href="/{{ project_id }}/issues/{{ issue.fingerprint }}">{{ issue.title }}</a></td>
-      <td><span class="badge badge-{{ issue.level }}">{{ issue.level }}</span></td>
-      <td>{{ issue.count }}</td>
-      <td>{% match issue.last_seen %}{% when Some with (ts) %}{{ ts.format("%Y-%m-%d %H:%M") }}{% when None %}—{% endmatch %}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="rounded-lg border border-border">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-border">
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Title</th>
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Path</th>
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Level</th>
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Events</th>
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Last Seen</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for issue in issues %}
+      <tr class="border-b border-border last:border-0 hover:bg-muted/50 transition-colors">
+        <td class="px-4 py-3"><a href="/{{ project_id }}/issues/{{ issue.fingerprint }}" class="text-foreground hover:underline underline-offset-4">{{ issue.title }}</a></td>
+        <td class="px-4 py-3">{% match issue.request_path %}{% when Some with (p) %}<code class="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{{ p }}</code>{% when None %}<span class="text-muted-foreground">—</span>{% endmatch %}</td>
+        <td class="px-4 py-3">
+          {% if issue.level == "error" %}
+          <span class="inline-flex items-center rounded-md bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-400 ring-1 ring-inset ring-red-500/20">{{ issue.level }}</span>
+          {% else if issue.level == "warning" %}
+          <span class="inline-flex items-center rounded-md bg-yellow-500/10 px-2 py-0.5 text-xs font-medium text-yellow-400 ring-1 ring-inset ring-yellow-500/20">{{ issue.level }}</span>
+          {% else if issue.level == "info" %}
+          <span class="inline-flex items-center rounded-md bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-400 ring-1 ring-inset ring-blue-500/20">{{ issue.level }}</span>
+          {% else if issue.level == "fatal" %}
+          <span class="inline-flex items-center rounded-md bg-red-900/50 px-2 py-0.5 text-xs font-medium text-red-300 ring-1 ring-inset ring-red-700/30">{{ issue.level }}</span>
+          {% else %}
+          <span class="inline-flex items-center rounded-md bg-zinc-500/10 px-2 py-0.5 text-xs font-medium text-zinc-400 ring-1 ring-inset ring-zinc-500/20">{{ issue.level }}</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-3 text-muted-foreground">{{ issue.count }}</td>
+        <td class="px-4 py-3 text-muted-foreground whitespace-nowrap">{% match issue.last_seen %}{% when Some with (ts) %}{{ ts.format("%Y-%m-%d %H:%M") }}{% when None %}—{% endmatch %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endif %}
 {% endblock %}

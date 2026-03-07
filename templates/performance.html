@@ -2,40 +2,49 @@
 {% block title %}Performance — light-sentry{% endblock %}
 {% block content %}
 {% include "partials/project_nav.html" %}
-<h2>Performance</h2>
+<nav class="flex items-center gap-1.5 text-sm text-muted-foreground mb-4">
+  <a href="/projects" class="hover:text-foreground transition-colors">Projects</a>
+  <span class="text-muted-foreground/50">/</span>
+  <a href="/{{ project_id }}/issues" class="hover:text-foreground transition-colors">{{ project_name }}</a>
+  <span class="text-muted-foreground/50">/</span>
+  <span class="text-foreground">Performance</span>
+</nav>
+<h2 class="text-lg font-semibold text-foreground mb-4">Performance</h2>
 
 {% if transactions.is_empty() %}
-  <p>No transactions recorded yet.</p>
+  <p class="text-sm text-muted-foreground">No transactions recorded yet.</p>
 {% else %}
-<table>
-  <thead>
-    <tr>
-      {% for col in [("name", "Name"), ("count", "Count"), ("p50", "P50 (ms)"), ("p95", "P95 (ms)"), ("last_seen", "Last Seen")] %}
-      <th>
-        {% if sort == col.0 %}
-          <a href="/{{ project_id }}/performance?sort={{ col.0 }}&dir={% if dir == "asc" %}desc{% else %}asc{% endif %}" style="text-decoration:none;color:inherit">
-            {{ col.1 }} {% if dir == "asc" %}&#9650;{% else %}&#9660;{% endif %}
-          </a>
-        {% else %}
-          <a href="/{{ project_id }}/performance?sort={{ col.0 }}&dir=desc" style="text-decoration:none;color:inherit">
-            {{ col.1 }}
-          </a>
-        {% endif %}
-      </th>
+<div class="rounded-lg border border-border">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-border">
+        {% for col in [("name", "Name"), ("count", "Count"), ("p50", "P50 (ms)"), ("p95", "P95 (ms)"), ("last_seen", "Last Seen")] %}
+        <th class="px-4 py-3 text-left text-sm font-medium">
+          {% if sort == col.0 %}
+            <a href="/{{ project_id }}/performance?sort={{ col.0 }}&dir={% if dir == "asc" %}desc{% else %}asc{% endif %}" class="text-foreground hover:text-foreground/80 no-underline">
+              {{ col.1 }} {% if dir == "asc" %}&#9650;{% else %}&#9660;{% endif %}
+            </a>
+          {% else %}
+            <a href="/{{ project_id }}/performance?sort={{ col.0 }}&dir=desc" class="text-muted-foreground hover:text-foreground no-underline transition-colors">
+              {{ col.1 }}
+            </a>
+          {% endif %}
+        </th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in transactions %}
+      <tr class="border-b border-border last:border-0 hover:bg-muted/50 transition-colors">
+        <td class="px-4 py-3"><a href="/{{ project_id }}/performance/{{ t.name }}" class="text-foreground hover:underline underline-offset-4">{{ t.name }}</a></td>
+        <td class="px-4 py-3 text-muted-foreground">{{ t.count }}</td>
+        <td class="px-4 py-3 text-muted-foreground">{% match t.p50 %}{% when Some with (v) %}{{ v|fmt("{:.1}") }}{% when None %}—{% endmatch %}</td>
+        <td class="px-4 py-3 text-muted-foreground">{% match t.p95 %}{% when Some with (v) %}{{ v|fmt("{:.1}") }}{% when None %}—{% endmatch %}</td>
+        <td class="px-4 py-3 text-muted-foreground whitespace-nowrap">{% match t.last_seen %}{% when Some with (ts) %}{{ ts.format("%Y-%m-%d %H:%M") }}{% when None %}—{% endmatch %}</td>
+      </tr>
       {% endfor %}
-    </tr>
-  </thead>
-  <tbody>
-    {% for t in transactions %}
-    <tr>
-      <td><a href="/{{ project_id }}/performance/{{ t.name }}">{{ t.name }}</a></td>
-      <td>{{ t.count }}</td>
-      <td>{% match t.p50 %}{% when Some with (v) %}{{ v|fmt("{:.1}") }}{% when None %}—{% endmatch %}</td>
-      <td>{% match t.p95 %}{% when Some with (v) %}{{ v|fmt("{:.1}") }}{% when None %}—{% endmatch %}</td>
-      <td>{% match t.last_seen %}{% when Some with (ts) %}{{ ts.format("%Y-%m-%d %H:%M") }}{% when None %}—{% endmatch %}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+    </tbody>
+  </table>
+</div>
 {% endif %}
 {% endblock %}

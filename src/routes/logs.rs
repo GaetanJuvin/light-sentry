@@ -59,6 +59,7 @@ fn default_page() -> i64 {
 #[template(path = "logs.html")]
 struct LogsTemplate {
     project_id: uuid::Uuid,
+    project_name: String,
     logs: Vec<LogRow>,
     current_level: Option<String>,
     current_search: String,
@@ -70,6 +71,7 @@ struct LogsTemplate {
     max_count: i64,
     first_label: String,
     last_label: String,
+    active_tab: &'static str,
 }
 
 #[derive(Template)]
@@ -93,6 +95,14 @@ pub async fn list(
     let Some(_user_id) = require_user(&session).await else {
         return Redirect::to("/login").into_response();
     };
+
+    let project_name: String = sqlx::query_scalar("SELECT name FROM projects WHERE id = $1")
+        .bind(project_id)
+        .fetch_optional(&state.db)
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| "Project".into());
 
     let level = filter.level.as_deref().filter(|l| !l.is_empty());
     let search = filter.search.as_deref().filter(|s| !s.is_empty());
@@ -127,6 +137,7 @@ pub async fn list(
 
     render(LogsTemplate {
         project_id,
+        project_name,
         logs,
         current_level: level.map(String::from),
         current_search: search.unwrap_or_default().to_string(),
@@ -138,6 +149,7 @@ pub async fn list(
         max_count,
         first_label,
         last_label,
+        active_tab: "logs",
     })
 }
 
