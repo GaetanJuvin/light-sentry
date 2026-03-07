@@ -108,11 +108,13 @@ pub async fn list(
     let search = filter.search.as_deref().filter(|s| !s.is_empty());
     let page = filter.page.max(1);
 
-    let (logs, total_count) = fetch_logs(&state.db, project_id, level, search, page).await;
+    let (logs_result, raw_histogram) = tokio::join!(
+        fetch_logs(&state.db, project_id, level, search, page),
+        fetch_histogram(&state.db, project_id, level, search),
+    );
+    let (logs, total_count) = logs_result;
     let total_pages = ((total_count as f64) / (PAGE_SIZE as f64)).ceil() as i64;
     let total_pages = total_pages.max(1);
-
-    let raw_histogram = fetch_histogram(&state.db, project_id, level, search).await;
     let max_count = raw_histogram.iter().map(|b| b.count).max().unwrap_or(0);
     let first_label = raw_histogram.first().map(|b| b.bucket.format("%H:%M").to_string()).unwrap_or_default();
     let last_label = raw_histogram.last().map(|b| b.bucket.format("%H:%M").to_string()).unwrap_or_default();
@@ -191,39 +193,62 @@ async fn fetch_logs(
 ) -> (Vec<LogRow>, i64) {
     let offset = (page - 1) * PAGE_SIZE;
 
-    let logs: Vec<LogRow> = sqlx::query_as(
+    // Build WHERE clause dynamically to avoid ($x IS NULL OR col = $x) anti-pattern
+    // which prevents Postgres from using indexes effectively.
+    let mut where_clauses = vec!["project_id = $1".to_string()];
+    let mut param_idx = 2u32;
+
+    let level_param_idx = if level.is_some() {
+        let idx = param_idx;
+        where_clauses.push(format!("level = ${idx}"));
+        param_idx += 1;
+        Some(idx)
+    } else {
+        None
+    };
+
+    let search_param_idx = if search.is_some() {
+        let idx = param_idx;
+        where_clauses.push(format!("message ILIKE '%' || ${idx} || '%'"));
+        param_idx += 1;
+        Some(idx)
+    } else {
+        None
+    };
+
+    let where_sql = where_clauses.join(" AND ");
+
+    let data_sql = format!(
         "SELECT level, message, received_at, context \
-         FROM logs \
-         WHERE project_id = $1 \
-           AND ($2::text IS NULL OR level = $2) \
-           AND ($3::text IS NULL OR message ILIKE '%' || $3 || '%') \
+         FROM logs WHERE {where_sql} \
          ORDER BY received_at DESC \
-         LIMIT $4 OFFSET $5",
-    )
-    .bind(project_id)
-    .bind(level)
-    .bind(search)
-    .bind(PAGE_SIZE)
-    .bind(offset)
-    .fetch_all(db)
-    .await
-    .unwrap_or_default();
+         LIMIT ${param_idx} OFFSET ${}",
+        param_idx + 1
+    );
 
-    let total_count: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) \
-         FROM logs \
-         WHERE project_id = $1 \
-           AND ($2::text IS NULL OR level = $2) \
-           AND ($3::text IS NULL OR message ILIKE '%' || $3 || '%')",
-    )
-    .bind(project_id)
-    .bind(level)
-    .bind(search)
-    .fetch_one(db)
-    .await
-    .unwrap_or(0);
+    let count_sql = format!("SELECT COUNT(*) FROM logs WHERE {where_sql}");
 
-    (logs, total_count)
+    // Build and execute both queries concurrently
+    let mut data_q = sqlx::query_as::<_, LogRow>(&data_sql).bind(project_id);
+    let mut count_q = sqlx::query_scalar::<_, i64>(&count_sql).bind(project_id);
+
+    if let Some(_) = level_param_idx {
+        data_q = data_q.bind(level);
+        count_q = count_q.bind(level);
+    }
+    if let Some(_) = search_param_idx {
+        data_q = data_q.bind(search);
+        count_q = count_q.bind(search);
+    }
+
+    let data_q = data_q.bind(PAGE_SIZE).bind(offset);
+
+    let (logs_result, count_result) = tokio::join!(
+        data_q.fetch_all(db),
+        count_q.fetch_one(db),
+    );
+
+    (logs_result.unwrap_or_default(), count_result.unwrap_or(0))
 }
 
 async fn fetch_histogram(
@@ -232,21 +257,35 @@ async fn fetch_histogram(
     level: Option<&str>,
     search: Option<&str>,
 ) -> Vec<HistogramRow> {
-    sqlx::query_as(
+    let mut where_clauses = vec![
+        "project_id = $1".to_string(),
+        "received_at > NOW() - INTERVAL '1 hour'".to_string(),
+    ];
+    let mut param_idx = 2u32;
+
+    if level.is_some() {
+        where_clauses.push(format!("level = ${param_idx}"));
+        param_idx += 1;
+    }
+    if search.is_some() {
+        where_clauses.push(format!("message ILIKE '%' || ${param_idx} || '%'"));
+    }
+
+    let where_sql = where_clauses.join(" AND ");
+    let sql = format!(
         "SELECT date_trunc('minute', received_at) AS bucket, \
                 COUNT(*) AS count \
-         FROM logs \
-         WHERE project_id = $1 \
-           AND received_at > NOW() - INTERVAL '1 hour' \
-           AND ($2::text IS NULL OR level = $2) \
-           AND ($3::text IS NULL OR message ILIKE '%' || $3 || '%') \
-         GROUP BY bucket \
-         ORDER BY bucket",
-    )
-    .bind(project_id)
-    .bind(level)
-    .bind(search)
-    .fetch_all(db)
-    .await
-    .unwrap_or_default()
+         FROM logs WHERE {where_sql} \
+         GROUP BY bucket ORDER BY bucket"
+    );
+
+    let mut q = sqlx::query_as::<_, HistogramRow>(&sql).bind(project_id);
+    if level.is_some() {
+        q = q.bind(level);
+    }
+    if search.is_some() {
+        q = q.bind(search);
+    }
+
+    q.fetch_all(db).await.unwrap_or_default()
 }
