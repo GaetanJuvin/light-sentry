@@ -15,6 +15,7 @@ const USER_ID_KEY: &str = "user_id";
 #[template(path = "login.html")]
 struct LoginTemplate {
     error: Option<String>,
+    registration_enabled: bool,
 }
 
 #[derive(Template)]
@@ -39,8 +40,8 @@ fn render<T: Template>(tmpl: T) -> Response {
     }
 }
 
-pub async fn login_page() -> Response {
-    render(LoginTemplate { error: None })
+pub async fn login_page(State(state): State<AppState>) -> Response {
+    render(LoginTemplate { error: None, registration_enabled: state.registration_enabled })
 }
 
 pub async fn login_submit(
@@ -48,6 +49,8 @@ pub async fn login_submit(
     session: Session,
     Form(form): Form<AuthForm>,
 ) -> Response {
+    let registration_enabled = state.registration_enabled;
+
     let row: Option<(uuid::Uuid, String)> =
         sqlx::query_as("SELECT id, password_hash FROM users WHERE email = $1")
             .bind(&form.email)
@@ -59,6 +62,7 @@ pub async fn login_submit(
     let Some((user_id, password_hash)) = row else {
         return render(LoginTemplate {
             error: Some("Invalid credentials".into()),
+            registration_enabled,
         });
     };
 
@@ -70,6 +74,7 @@ pub async fn login_submit(
     if !valid {
         return render(LoginTemplate {
             error: Some("Invalid credentials".into()),
+            registration_enabled,
         });
     }
 
@@ -80,7 +85,10 @@ pub async fn login_submit(
     Redirect::to("/projects").into_response()
 }
 
-pub async fn register_page() -> Response {
+pub async fn register_page(State(state): State<AppState>) -> Response {
+    if !state.registration_enabled {
+        return Redirect::to("/login").into_response();
+    }
     render(RegisterTemplate { error: None })
 }
 
@@ -89,6 +97,9 @@ pub async fn register_submit(
     session: Session,
     Form(form): Form<AuthForm>,
 ) -> Response {
+    if !state.registration_enabled {
+        return Redirect::to("/login").into_response();
+    }
     if form.password.len() < 8 {
         return render(RegisterTemplate {
             error: Some("Password must be at least 8 characters".into()),
