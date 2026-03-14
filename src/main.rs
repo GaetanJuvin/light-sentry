@@ -1,6 +1,7 @@
 use axum::{Router, routing::{get, post}};
 use tower_http::trace::TraceLayer;
-use tower_sessions::{MemoryStore, SessionManagerLayer, Expiry};
+use tower_sessions::{SessionManagerLayer, Expiry};
+use tower_sessions_sqlx_store::PostgresStore;
 use time::Duration;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -40,7 +41,8 @@ async fn main() -> anyhow::Result<()> {
 
     background::spawn_retention_cleanup(state.db.clone());
 
-    let session_store = MemoryStore::default();
+    let session_store = PostgresStore::new(state.db.clone());
+    session_store.migrate().await?;
     let session_layer = SessionManagerLayer::new(session_store)
         .with_secure(false)
         .with_expiry(Expiry::OnInactivity(Duration::days(365)));

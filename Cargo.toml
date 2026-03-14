@@ -16,7 +16,8 @@ sqlx = { version = "0.8", features = [
     "chrono",
     "migrate",
 ] }
-tower-sessions = { version = "0.15" }
+tower-sessions = { version = "0.14" }
+tower-sessions-sqlx-store = { version = "0.15", features = ["postgres"] }
 argon2 = "0.5"
 password-hash = { version = "0.5", features = ["rand_core"] }
 serde = { version = "1", features = ["derive"] }
