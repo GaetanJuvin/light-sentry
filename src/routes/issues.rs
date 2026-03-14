@@ -1,11 +1,18 @@
 use askama::Template;
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     response::{Html, IntoResponse, Redirect, Response},
 };
+use serde::Deserialize;
 use tower_sessions::Session;
 
 use crate::{routes::auth::require_user, state::AppState};
+
+#[derive(Deserialize)]
+pub struct IssueListParams {
+    #[serde(default)]
+    sort: Option<String>,
+}
 
 fn render<T: Template>(tmpl: T) -> Response {
     match tmpl.render() {
@@ -108,6 +115,7 @@ struct IssuesTemplate {
     project_name: String,
     issues: Vec<IssueDisplay>,
     active_tab: &'static str,
+    sort: String,
 }
 
 #[derive(Template)]
@@ -125,6 +133,7 @@ pub async fn list(
     State(state): State<AppState>,
     session: Session,
     Path(project_id): Path<uuid::Uuid>,
+    Query(params): Query<IssueListParams>,
 ) -> Response {
     let Some(_user_id) = require_user(&session).await else {
         return Redirect::to("/login").into_response();
@@ -138,7 +147,15 @@ pub async fn list(
         .flatten()
         .unwrap_or_else(|| "Project".into());
 
-    let rows: Vec<IssueQueryRow> = sqlx::query_as(
+    let sort = params.sort.as_deref().unwrap_or("last_seen");
+    let order_clause = match sort {
+        "events" => "ORDER BY count DESC",
+        "events_asc" => "ORDER BY count ASC",
+        "last_seen_asc" => "ORDER BY last_seen ASC",
+        _ => "ORDER BY last_seen DESC",
+    };
+
+    let query = format!(
         "SELECT e.fingerprint, \
                MAX(e.title) as title, \
                MAX(e.level) as level, \
@@ -150,17 +167,19 @@ pub async fn list(
          FROM error_events e \
          WHERE e.project_id = $1 \
          GROUP BY e.fingerprint \
-         ORDER BY last_seen DESC \
-         LIMIT 100",
-    )
-    .bind(project_id)
-    .fetch_all(&state.db)
-    .await
-    .unwrap_or_default();
+         {order_clause} \
+         LIMIT 100"
+    );
+
+    let rows: Vec<IssueQueryRow> = sqlx::query_as(&query)
+        .bind(project_id)
+        .fetch_all(&state.db)
+        .await
+        .unwrap_or_default();
 
     let issues: Vec<IssueDisplay> = rows.into_iter().map(IssueDisplay::from).collect();
 
-    render(IssuesTemplate { project_id, project_name, issues, active_tab: "issues" })
+    render(IssuesTemplate { project_id, project_name, issues, active_tab: "issues", sort: sort.to_string() })
 }
 
 pub async fn detail(

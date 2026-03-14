@@ -14,22 +14,37 @@
 {% if issues.is_empty() %}
   <p class="text-sm text-muted-foreground">No issues recorded yet.</p>
 {% else %}
-<div class="rounded-lg border border-border">
-  <table class="w-full text-sm">
+<div class="rounded-lg border border-border overflow-hidden">
+  <table class="w-full text-sm table-fixed">
+    <colgroup>
+      <col class="w-[40%]">
+      <col class="w-[25%]">
+      <col class="w-[10%]">
+      <col class="w-[10%]">
+      <col class="w-[15%]">
+    </colgroup>
     <thead>
       <tr class="border-b border-border">
         <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Title</th>
         <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Path</th>
         <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Level</th>
-        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Events</th>
-        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Last Seen</th>
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+          <a href="/{{ project_id }}/issues?sort={% if sort == "events" %}events_asc{% else %}events{% endif %}" class="hover:text-foreground transition-colors inline-flex items-center gap-1">
+            Events{% if sort == "events" %} <span class="text-xs">&#9660;</span>{% else if sort == "events_asc" %} <span class="text-xs">&#9650;</span>{% endif %}
+          </a>
+        </th>
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+          <a href="/{{ project_id }}/issues?sort={% if sort == "last_seen" %}last_seen_asc{% else %}last_seen{% endif %}" class="hover:text-foreground transition-colors inline-flex items-center gap-1">
+            Last Seen{% if sort == "last_seen" %} <span class="text-xs">&#9660;</span>{% else if sort == "last_seen_asc" %} <span class="text-xs">&#9650;</span>{% endif %}
+          </a>
+        </th>
       </tr>
     </thead>
     <tbody>
       {% for issue in issues %}
       <tr class="border-b border-border last:border-0 hover:bg-muted/50 transition-colors">
-        <td class="px-4 py-3"><a href="/{{ project_id }}/issues/{{ issue.fingerprint }}" class="text-foreground hover:underline underline-offset-4">{{ issue.title }}</a></td>
-        <td class="px-4 py-3">{% match issue.request_path %}{% when Some with (p) %}<code class="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{{ p }}</code>{% when None %}<span class="text-muted-foreground">—</span>{% endmatch %}</td>
+        <td class="px-4 py-3 truncate"><a href="/{{ project_id }}/issues/{{ issue.fingerprint }}" class="text-foreground hover:underline underline-offset-4" title="{{ issue.title }}">{{ issue.title }}</a></td>
+        <td class="px-4 py-3 truncate">{% match issue.request_path %}{% when Some with (p) %}<code class="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded" title="{{ p }}">{{ p }}</code>{% when None %}<span class="text-muted-foreground">—</span>{% endmatch %}</td>
         <td class="px-4 py-3">
           {% if issue.level == "error" %}
           <span class="inline-flex items-center rounded-md bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-400 ring-1 ring-inset ring-red-500/20">{{ issue.level }}</span>
