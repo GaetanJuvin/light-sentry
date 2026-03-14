@@ -12,6 +12,8 @@ use crate::{routes::auth::require_user, state::AppState};
 pub struct IssueListParams {
     #[serde(default)]
     sort: Option<String>,
+    #[serde(default)]
+    status: Option<String>,
 }
 
 fn render<T: Template>(tmpl: T) -> Response {
@@ -41,7 +43,38 @@ pub struct IssueDisplay {
     pub level: String,
     pub count: i64,
     pub last_seen: Option<chrono::DateTime<chrono::Utc>>,
+    pub last_seen_relative: String,
     pub request_path: Option<String>,
+    pub status: &'static str, // "active", "stale", "resolved"
+}
+
+fn relative_time(dt: chrono::DateTime<chrono::Utc>) -> String {
+    let now = chrono::Utc::now();
+    let delta = now - dt;
+
+    if delta.num_minutes() < 1 {
+        "just now".to_string()
+    } else if delta.num_minutes() < 60 {
+        format!("{}m ago", delta.num_minutes())
+    } else if delta.num_hours() < 24 {
+        format!("{}h ago", delta.num_hours())
+    } else if delta.num_days() < 30 {
+        format!("{}d ago", delta.num_days())
+    } else {
+        format!("{}mo ago", delta.num_days() / 30)
+    }
+}
+
+fn issue_status(last_seen: Option<chrono::DateTime<chrono::Utc>>) -> &'static str {
+    let Some(ts) = last_seen else { return "resolved" };
+    let days = (chrono::Utc::now() - ts).num_days();
+    if days <= 7 {
+        "active"
+    } else if days <= 30 {
+        "stale"
+    } else {
+        "resolved"
+    }
 }
 
 impl From<IssueQueryRow> for IssueDisplay {
@@ -62,13 +95,18 @@ impl From<IssueQueryRow> for IssueDisplay {
                 url.to_string()
             });
 
+        let status = issue_status(row.last_seen);
+        let last_seen_relative = row.last_seen.map(relative_time).unwrap_or_else(|| "—".into());
+
         Self {
             fingerprint: row.fingerprint,
             title: row.title.unwrap_or_else(|| "(unknown)".into()),
             level: row.level.unwrap_or_else(|| "error".into()),
             count: row.count.unwrap_or(0),
             last_seen: row.last_seen,
+            last_seen_relative,
             request_path,
+            status,
         }
     }
 }
@@ -116,6 +154,10 @@ struct IssuesTemplate {
     issues: Vec<IssueDisplay>,
     active_tab: &'static str,
     sort: String,
+    status_filter: String,
+    count_active: usize,
+    count_stale: usize,
+    count_resolved: usize,
 }
 
 #[derive(Template)]
@@ -177,9 +219,20 @@ pub async fn list(
         .await
         .unwrap_or_default();
 
-    let issues: Vec<IssueDisplay> = rows.into_iter().map(IssueDisplay::from).collect();
+    let all_issues: Vec<IssueDisplay> = rows.into_iter().map(IssueDisplay::from).collect();
 
-    render(IssuesTemplate { project_id, project_name, issues, active_tab: "issues", sort: sort.to_string() })
+    let count_active = all_issues.iter().filter(|i| i.status == "active").count();
+    let count_stale = all_issues.iter().filter(|i| i.status == "stale").count();
+    let count_resolved = all_issues.iter().filter(|i| i.status == "resolved").count();
+
+    let status_filter = params.status.as_deref().unwrap_or("all").to_string();
+    let issues: Vec<IssueDisplay> = if status_filter == "all" {
+        all_issues
+    } else {
+        all_issues.into_iter().filter(|i| i.status == status_filter).collect()
+    };
+
+    render(IssuesTemplate { project_id, project_name, issues, active_tab: "issues", sort: sort.to_string(), status_filter, count_active, count_stale, count_resolved })
 }
 
 pub async fn detail(

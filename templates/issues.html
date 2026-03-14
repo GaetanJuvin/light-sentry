@@ -9,32 +9,55 @@
   <span class="text-muted-foreground/50">/</span>
   <span class="text-foreground">Issues</span>
 </nav>
-<h2 class="text-lg font-semibold text-foreground mb-4">Issues</h2>
+
+<div class="flex items-center justify-between mb-4">
+  <h2 class="text-lg font-semibold text-foreground">Issues</h2>
+  <div class="flex items-center gap-1 rounded-lg border border-border p-0.5 text-xs">
+    <a href="/{{ project_id }}/issues?status=all{% if sort != "last_seen" %}&sort={{ sort }}{% endif %}"
+       class="px-2.5 py-1 rounded-md transition-colors {% if status_filter == "all" %}bg-muted text-foreground{% else %}text-muted-foreground hover:text-foreground{% endif %}">
+      All
+    </a>
+    <a href="/{{ project_id }}/issues?status=active{% if sort != "last_seen" %}&sort={{ sort }}{% endif %}"
+       class="px-2.5 py-1 rounded-md transition-colors {% if status_filter == "active" %}bg-muted text-foreground{% else %}text-muted-foreground hover:text-foreground{% endif %}">
+      Active <span class="ml-0.5 text-muted-foreground">{{ count_active }}</span>
+    </a>
+    <a href="/{{ project_id }}/issues?status=stale{% if sort != "last_seen" %}&sort={{ sort }}{% endif %}"
+       class="px-2.5 py-1 rounded-md transition-colors {% if status_filter == "stale" %}bg-muted text-foreground{% else %}text-muted-foreground hover:text-foreground{% endif %}">
+      Stale <span class="ml-0.5 text-muted-foreground">{{ count_stale }}</span>
+    </a>
+    <a href="/{{ project_id }}/issues?status=resolved{% if sort != "last_seen" %}&sort={{ sort }}{% endif %}"
+       class="px-2.5 py-1 rounded-md transition-colors {% if status_filter == "resolved" %}bg-muted text-foreground{% else %}text-muted-foreground hover:text-foreground{% endif %}">
+      Resolved <span class="ml-0.5 text-muted-foreground">{{ count_resolved }}</span>
+    </a>
+  </div>
+</div>
 
 {% if issues.is_empty() %}
-  <p class="text-sm text-muted-foreground">No issues recorded yet.</p>
+  <p class="text-sm text-muted-foreground">No {% if status_filter != "all" %}{{ status_filter }} {% endif %}issues found.</p>
 {% else %}
 <div class="rounded-lg border border-border overflow-hidden">
   <table class="w-full text-sm table-fixed">
     <colgroup>
-      <col class="w-[40%]">
-      <col class="w-[25%]">
+      <col class="w-[5%]">
+      <col class="w-[35%]">
+      <col class="w-[22%]">
       <col class="w-[10%]">
       <col class="w-[10%]">
-      <col class="w-[15%]">
+      <col class="w-[18%]">
     </colgroup>
     <thead>
       <tr class="border-b border-border">
+        <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground"></th>
         <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Title</th>
         <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Path</th>
         <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Level</th>
         <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-          <a href="/{{ project_id }}/issues?sort={% if sort == "events" %}events_asc{% else %}events{% endif %}" class="hover:text-foreground transition-colors inline-flex items-center gap-1">
+          <a href="/{{ project_id }}/issues?sort={% if sort == "events" %}events_asc{% else %}events{% endif %}{% if status_filter != "all" %}&status={{ status_filter }}{% endif %}" class="hover:text-foreground transition-colors inline-flex items-center gap-1">
             Events{% if sort == "events" %} <span class="text-xs">&#9660;</span>{% else if sort == "events_asc" %} <span class="text-xs">&#9650;</span>{% endif %}
           </a>
         </th>
         <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-          <a href="/{{ project_id }}/issues?sort={% if sort == "last_seen" %}last_seen_asc{% else %}last_seen{% endif %}" class="hover:text-foreground transition-colors inline-flex items-center gap-1">
+          <a href="/{{ project_id }}/issues?sort={% if sort == "last_seen" %}last_seen_asc{% else %}last_seen{% endif %}{% if status_filter != "all" %}&status={{ status_filter }}{% endif %}" class="hover:text-foreground transition-colors inline-flex items-center gap-1">
             Last Seen{% if sort == "last_seen" %} <span class="text-xs">&#9660;</span>{% else if sort == "last_seen_asc" %} <span class="text-xs">&#9650;</span>{% endif %}
           </a>
         </th>
@@ -43,6 +66,15 @@
     <tbody>
       {% for issue in issues %}
       <tr class="border-b border-border last:border-0 hover:bg-muted/50 transition-colors">
+        <td class="px-4 py-3">
+          {% if issue.status == "active" %}
+          <span class="flex h-2 w-2 rounded-full bg-green-500" title="Active — seen in the last 7 days"></span>
+          {% else if issue.status == "stale" %}
+          <span class="flex h-2 w-2 rounded-full bg-yellow-500" title="Stale — not seen in 7-30 days"></span>
+          {% else %}
+          <span class="flex h-2 w-2 rounded-full bg-zinc-600" title="Resolved — not seen in 30+ days"></span>
+          {% endif %}
+        </td>
         <td class="px-4 py-3 truncate"><a href="/{{ project_id }}/issues/{{ issue.fingerprint }}" class="text-foreground hover:underline underline-offset-4" title="{{ issue.title }}">{{ issue.title }}</a></td>
         <td class="px-4 py-3 truncate">{% match issue.request_path %}{% when Some with (p) %}<code class="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded" title="{{ p }}">{{ p }}</code>{% when None %}<span class="text-muted-foreground">—</span>{% endmatch %}</td>
         <td class="px-4 py-3">
@@ -59,7 +91,7 @@
           {% endif %}
         </td>
         <td class="px-4 py-3 text-muted-foreground">{{ issue.count }}</td>
-        <td class="px-4 py-3 text-muted-foreground whitespace-nowrap">{% match issue.last_seen %}{% when Some with (ts) %}{{ ts.format("%Y-%m-%d %H:%M") }}{% when None %}—{% endmatch %}</td>
+        <td class="px-4 py-3 text-muted-foreground whitespace-nowrap">{{ issue.last_seen_relative }}</td>
       </tr>
       {% endfor %}
     </tbody>
